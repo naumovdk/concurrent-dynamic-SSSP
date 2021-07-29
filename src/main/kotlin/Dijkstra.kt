@@ -2,30 +2,17 @@ import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 import kotlin.math.min
 
-class Dijkstra(private val graph: Graph = mutableMapOf(), private val source: Int = 0) : Dsssp() {
+class Dijkstra(private val graph: Graph, private val source: Int) : Dsssp(graph, source) {
     private var changed = true
     private val distances = mutableMapOf<Int, Double>()
 
-    init {
-        graph[source] = mutableMapOf()
-
-        for (i in 0..INITIAL_GRAPH_SIZE) {
-            addVertex(i)
-        }
-    }
-
-    @Synchronized
-    override fun getDistance(index: Int): Double? {
-        if (!graph.contains(index)) {
-            return null
-        }
+    override fun getDistance(vertex: Int): Double? {
         if (changed) {
             recompute()
         }
-        return distances.getOrDefault(index, POSITIVE_INFINITY)
+        return distances[vertex]
     }
 
-    @Synchronized
     private fun recompute() {
         val pq = PriorityQueue(compareBy<Int> { distances.getOrDefault(it, POSITIVE_INFINITY) })
         pq.add(source)
@@ -38,7 +25,7 @@ class Dijkstra(private val graph: Graph = mutableMapOf(), private val source: In
 
         while (pq.isNotEmpty()) {
             val cur = pq.poll()
-            for ((u, w) in graph[cur]!!) {
+            graph[cur]!!.forEach { (u, w) ->
                 distances[u] = min(distances[cur]!! + w, distances.getOrDefault(u, POSITIVE_INFINITY))
                 if (!marked.contains(u)) {
                     marked.add(u)
@@ -48,60 +35,39 @@ class Dijkstra(private val graph: Graph = mutableMapOf(), private val source: In
         }
     }
 
-    @Synchronized
-    override fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean {
-        if (fromIndex == toIndex) return false
-        if (!graph.containsKey(fromIndex)) {
+    override fun setEdge(from: Int, to: Int, newWeight: Double) {
+        if (!graph.containsKey(from)) {
+            graph[from] = mutableMapOf()
+        }
+        graph[from]!![to] = newWeight
+        changed = true
+    }
+
+    override fun removeEdge(from: Int, to: Int): Boolean {
+        if (!graph.containsKey(from)) {
             return false
         }
-        if (!graph.containsKey(toIndex)) {
+        if (!graph[from]!!.containsKey(to)) {
             return false
         }
-        if (changed) {
-            recompute()
-        }
-        if (distances.getOrDefault(toIndex, POSITIVE_INFINITY) <= distances.getOrDefault(fromIndex, POSITIVE_INFINITY) + newWeight) {
-            return false
-        }
-        graph[fromIndex]!![toIndex] = newWeight
+        graph[from]!!.remove(to)
         changed = true
         return true
     }
 
-
-    @Synchronized
-    override fun removeEdge(fromIndex: Int, toIndex: Int): Boolean {
-        if (!graph.containsKey(fromIndex)) {
+    override fun addVertex(vertex: Int): Boolean {
+        if (graph.containsKey(vertex)) {
             return false
         }
-        if (!graph[fromIndex]!!.containsKey(toIndex)) {
-            return false
-        }
-        graph[fromIndex]!!.remove(toIndex)
-        changed = true
+        graph[vertex] = mutableMapOf()
         return true
     }
 
-
-    @Synchronized
-    override fun addVertex(index: Int): Boolean {
-        if (graph.containsKey(index)) {
+    override fun removeVertex(vertex: Int): Boolean {
+        if (!graph.containsKey(vertex)) {
             return false
         }
-        graph[index] = mutableMapOf()
+        graph.remove(vertex)
         return true
-    }
-
-    @Synchronized
-    override fun removeVertex(index: Int): Boolean {
-        if (!graph.containsKey(index)) {
-            return false
-        }
-        graph.remove(index)
-        return true
-    }
-
-    fun extractState(): Any {
-        return this
     }
 }

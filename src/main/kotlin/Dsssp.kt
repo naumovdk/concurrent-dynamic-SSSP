@@ -1,17 +1,17 @@
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-
 typealias Graph = MutableMap<Int, MutableMap<Int, Double>>
 
-abstract class Dsssp {
-    val INITIAL_GRAPH_SIZE = 7
+abstract class Dsssp(graph: Graph, source: Int) {
+    fun decreaseWeight(from: Int, to: Int) {
 
-    abstract fun getDistance(index: Int) : Double?
+    }
 
-    abstract fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean
+    abstract fun getDistance(vertex: Int) : Double?
 
-    abstract fun removeEdge(fromIndex: Int, toIndex: Int) : Boolean
+    abstract fun setEdge(from: Int, to: Int, newWeight: Double)
 
-    abstract fun addVertex(index: Int) : Boolean
+    abstract fun removeEdge(from: Int, to: Int) : Boolean
 
-    abstract fun removeVertex(index: Int) : Boolean
+    abstract fun addVertex(vertex: Int) : Boolean
+
+    abstract fun removeVertex(vertex: Int) : Boolean
 }

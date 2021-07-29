@@ -2,19 +2,16 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.5.21'
 }
 
-test {
-    jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
-    maxHeapSize = "10g"
-}
+group = 'me.dimna'
+version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile "org.jetbrains.kotlinx:lincheck:2.13"
     testImplementation "org.jetbrains.kotlinx:lincheck:2.13"
+
     testImplementation "junit:junit:4.12"
 }
 
