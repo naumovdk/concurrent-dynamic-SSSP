@@ -2,17 +2,26 @@ import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 import kotlin.math.min
 
-class Dijkstra(private val graph: Graph, private val source: Int) : Dsssp(graph, source) {
+class Dijkstra(
+    private val graph: Graph = mutableMapOf(
+        0 to mutableMapOf(),
+        1 to mutableMapOf(),
+        2 to mutableMapOf(),
+        3 to mutableMapOf()
+    ), private val source: Int = 0
+) : Dsssp() {
     private var changed = true
     private val distances = mutableMapOf<Int, Double>()
 
-    override fun getDistance(vertex: Int): Double? {
+    @Synchronized
+    override fun getDistance(index: Int): Double? {
         if (changed) {
             recompute()
         }
-        return distances[vertex]
+        return distances[index]
     }
 
+    @Synchronized
     private fun recompute() {
         val pq = PriorityQueue(compareBy<Int> { distances.getOrDefault(it, POSITIVE_INFINITY) })
         pq.add(source)
@@ -35,14 +44,18 @@ class Dijkstra(private val graph: Graph, private val source: Int) : Dsssp(graph,
         }
     }
 
-    override fun setEdge(from: Int, to: Int, newWeight: Double) {
+    @Synchronized
+    override fun setEdge(from: Int, to: Int, newWeight: Double): Boolean {
         if (!graph.containsKey(from)) {
-            graph[from] = mutableMapOf()
+            return false
         }
         graph[from]!![to] = newWeight
         changed = true
+        return true
     }
 
+
+    @Synchronized
     override fun removeEdge(from: Int, to: Int): Boolean {
         if (!graph.containsKey(from)) {
             return false
@@ -55,19 +68,22 @@ class Dijkstra(private val graph: Graph, private val source: Int) : Dsssp(graph,
         return true
     }
 
-    override fun addVertex(vertex: Int): Boolean {
-        if (graph.containsKey(vertex)) {
+
+    @Synchronized
+    override fun addVertex(index: Int): Boolean {
+        if (graph.containsKey(index)) {
             return false
         }
-        graph[vertex] = mutableMapOf()
+        graph[index] = mutableMapOf()
         return true
     }
 
-    override fun removeVertex(vertex: Int): Boolean {
-        if (!graph.containsKey(vertex)) {
+    @Synchronized
+    override fun removeVertex(index: Int): Boolean {
+        if (!graph.containsKey(index)) {
             return false
         }
-        graph.remove(vertex)
+        graph.remove(index)
         return true
     }
 }

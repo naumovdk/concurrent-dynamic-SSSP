@@ -10,8 +10,8 @@ repositories {
 }
 
 dependencies {
+    compile "org.jetbrains.kotlinx:lincheck:2.13"
     testImplementation "org.jetbrains.kotlinx:lincheck:2.13"
-
     testImplementation "junit:junit:4.12"
 }
 
