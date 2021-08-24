@@ -3,6 +3,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 typealias Graph = MutableMap<Int, MutableMap<Int, Double>>
 
 abstract class Dsssp {
+    val INITIAL_GRAPH_SIZE = 7
+
     abstract fun getDistance(index: Int) : Double?
 
     abstract fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean

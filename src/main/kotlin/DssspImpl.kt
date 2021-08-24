@@ -1,30 +1,29 @@
 import DssspImpl.Status.*
+import java.lang.Exception
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.Double.Companion.POSITIVE_INFINITY
 
+@Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
 class DssspImpl(source: Int) : Dsssp() {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     class Descriptor(
-        val queue: PriorityQueue<Pair<Double, Vertex>>,
+        var queue: PriorityQueue<Pair<Double, Vertex>>,
         val status: AtomicReference<Status>,
-        private val operation: () -> Boolean
-    ) {
-        fun abort(): Boolean {
-            status.set(ABORTED)
-            return operation.invoke()
-        }
-    }
+    )
 
-    class Distance(var oldDistance: Double = POSITIVE_INFINITY, var newDistance: Double = POSITIVE_INFINITY) {
-        fun read(status: Status) : Double {
-            assert(status != IN_PROGRESS)
-            return if (status != ABORTED) {
-                newDistance
-            } else {
-                oldDistance
+    class Distance(
+        val oldDistance: Double = POSITIVE_INFINITY,
+        val newDistance: Double = POSITIVE_INFINITY,
+    ) {
+        fun read(status: Status, changed: Boolean): Double {
+            return when (status) {
+                SUCCESS -> newDistance
+                IN_PROGRESS -> throw Exception("read vertex in progress")
+                ABORTED -> if (changed) oldDistance else newDistance
             }
         }
     }
@@ -33,32 +32,45 @@ class DssspImpl(source: Int) : Dsssp() {
         SUCCESS, IN_PROGRESS, ABORTED
     }
 
-    class Vertex(val index: Int) {
+    class Vertex {
         val outgoing = ConcurrentHashMap<Int, Double>()
         var distance = AtomicReference(Distance())
-        private val defaultDescriptor = Descriptor(PriorityQueue(), AtomicReference(SUCCESS)) { true }
-        private var descriptor: AtomicReference<Descriptor> = AtomicReference(defaultDescriptor)
+        private val defaultDescriptor = Descriptor(PriorityQueue(), AtomicReference(SUCCESS))
+        private val readDescriptor = Descriptor(PriorityQueue(), AtomicReference(IN_PROGRESS))
+        val descriptor: AtomicReference<Descriptor> = AtomicReference(defaultDescriptor)
+        val changed = AtomicBoolean(true)
 
         fun readDistance(): Double {
-            while (true) {
-                val distance = distance.get()
-                val status = descriptor.get().status.get()
-                if (status != IN_PROGRESS) {
-                    return distance.read(status)
-                }
-            }
-        }
-
-        fun acquireAndGet(newDescriptor: Descriptor): Pair<Double, Status> {
             while (true) {
                 val curDescriptor = descriptor.get()
                 val curStatus = curDescriptor.status.get()
                 if (curStatus != IN_PROGRESS) {
+                    if (descriptor.compareAndSet(curDescriptor, readDescriptor)) {
+                        val distance = distance.get()
+                        val changed = changed.get()
+                        val res = distance.read(curStatus, changed)
+                        descriptor.set(curDescriptor)
+                        return res
+                    }
+                }
+            }
+        }
+
+        fun acquireAndGet(newDescriptor: Descriptor): Double? {
+            while (true) {
+                val curDescriptor = descriptor.get()
+                val curStatus = curDescriptor.status.get()
+                val curChanged = changed.get()
+                if (curStatus != IN_PROGRESS) {
                     if (descriptor.compareAndSet(curDescriptor, newDescriptor)) {
-                        return distance.get().read(curStatus) to curStatus
+                        val curDistance = distance.get()
+                        val actualDistance = curDistance.read(curStatus, curChanged)
+                        assert(distance.compareAndSet(curDistance, Distance(newDistance = actualDistance, oldDistance = 1.234567)))
+                        changed.set(false)
+                        return actualDistance
                     }
                 } else {
-                    curDescriptor.abort()
+                    return null
                 }
             }
         }
@@ -70,13 +82,17 @@ class DssspImpl(source: Int) : Dsssp() {
     }
 
     init {
-        vertexes[source] = Vertex(source)
-        vertexes[source]!!.distance.set(Distance(newDistance = 0.0, oldDistance = POSITIVE_INFINITY))
+        val root = Vertex()
+        root.distance.set(Distance(newDistance = 0.0, oldDistance = POSITIVE_INFINITY))
+        vertexes[source] = root
+
+        for (i in 0..INITIAL_GRAPH_SIZE) {
+            addVertex(i)
+        }
     }
 
     override fun getDistance(index: Int): Double? {
-        val vertex = vertexes[index] ?: return null
-        return vertex.readDistance()
+        return vertexes[index]?.readDistance()
     }
 
     override fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean {
@@ -86,46 +102,70 @@ class DssspImpl(source: Int) : Dsssp() {
         val from = vertexes[fromIndex] ?: return false
         val to = vertexes[toIndex] ?: return false
 
-        val newDescriptor = Descriptor(
-            PriorityQueue(compareBy { it.first }),
-            AtomicReference(IN_PROGRESS)
-        ) { setEdge(fromIndex, toIndex, newWeight) }
+        wholeOperation@while (true) {
+            val newDescriptor = Descriptor(
+                PriorityQueue(compareBy { it.first }),
+                AtomicReference(IN_PROGRESS)
+            )
 
-        val fromDistance = from.readDistance()
-        val (toDistance, toStatus) = to.acquireAndGet(newDescriptor)
-        val newDistance = fromDistance + newWeight
-        return if (newDistance < toDistance) {
-            from.outgoing[toIndex] = newWeight
-            to.distance.set(Distance(oldDistance = toDistance, newDistance = newDistance))
-            newDescriptor.queue.add(newDistance to to)
-            decremental(newDescriptor)
-        } else {
-            newDescriptor.status.set(toStatus)
-            false // only decremental for now
-        }
-    }
+            val fromDistance = from.acquireAndGet(newDescriptor)
+            if (fromDistance == null) {
+                newDescriptor.status.set(ABORTED)
+                continue@wholeOperation
+            }
 
-    private fun decremental(newDescriptor: Descriptor): Boolean {
-        while (newDescriptor.queue.isNotEmpty()) {
-            val (curDistance, cur) = newDescriptor.queue.poll()
-            for ((index, w) in cur.outgoing) {
-                val neighbour = vertexes[index]!!
-                val (oldDistance, _) = neighbour.acquireAndGet(newDescriptor)
-                val newDistance = curDistance + w
-                if (newDistance < oldDistance) {
-                    neighbour.distance.set(Distance(oldDistance = oldDistance, newDistance = newDistance))
-                    newDescriptor.queue.add(newDistance to neighbour)
-                } else {
-                    neighbour.release()
+            val toDistance = to.acquireAndGet(newDescriptor)
+            if (toDistance == null) {
+                newDescriptor.status.set(ABORTED)
+                continue@wholeOperation
+            }
+
+            assert(to.descriptor.get().status.get() == IN_PROGRESS)
+            assert(to.descriptor.get() === newDescriptor)
+
+            val newToDistance = fromDistance + newWeight
+            return if (newToDistance < toDistance) {
+                from.outgoing[toIndex] = newWeight
+                to.distance.set(Distance(oldDistance = toDistance, newDistance = newToDistance))
+                to.changed.set(true)
+                newDescriptor.queue.add(newToDistance to to)
+
+                while (newDescriptor.queue.isNotEmpty()) {
+                    val (curDistance, cur) = newDescriptor.queue.poll()
+                    neighbors@for ((index, w) in cur.outgoing) {
+                        val neighbour = vertexes[index]!!
+                        if (neighbour === from) {
+                            continue@neighbors
+                        }
+                        val oldDistance = neighbour.acquireAndGet(newDescriptor)
+                            ?: if (neighbour.descriptor.get() === newDescriptor) {
+                                neighbour.distance.get().newDistance
+                            } else {
+                                newDescriptor.status.set(ABORTED)
+                                continue@wholeOperation
+                            }
+                        val newDistance = curDistance + w
+                        if (newDistance < oldDistance) {
+                            neighbour.distance.set(Distance(oldDistance = oldDistance, newDistance = newDistance))
+                            neighbour.changed.set(true)
+                            newDescriptor.queue.add(newDistance to neighbour)
+                        } else {
+                            neighbour.release()
+                        }
+                    }
                 }
+                newDescriptor.status.set(SUCCESS)
+                return true
+            } else {
+                newDescriptor.status.set(ABORTED)
+                false // only decremental for now
             }
         }
-        newDescriptor.status.set(SUCCESS)
-        return true
     }
 
+
     override fun addVertex(index: Int): Boolean {
-        val newVertex = Vertex(index)
+        val newVertex = Vertex()
         val mapped = vertexes.getOrPut(index) { newVertex }
         return mapped === newVertex
     }

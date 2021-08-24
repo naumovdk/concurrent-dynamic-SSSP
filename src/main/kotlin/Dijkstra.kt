@@ -8,6 +8,10 @@ class Dijkstra(private val graph: Graph = mutableMapOf(), private val source: In
 
     init {
         graph[source] = mutableMapOf()
+
+        for (i in 0..INITIAL_GRAPH_SIZE) {
+            addVertex(i)
+        }
     }
 
     @Synchronized
@@ -95,5 +99,9 @@ class Dijkstra(private val graph: Graph = mutableMapOf(), private val source: In
         }
         graph.remove(index)
         return true
+    }
+
+    fun extractState(): Any {
+        return this
     }
 }
