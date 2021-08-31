@@ -1,89 +1,80 @@
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
-import kotlin.math.min
 
-class Dijkstra(
-    private val graph: Graph = mutableMapOf(
-        0 to mutableMapOf(),
-        1 to mutableMapOf(),
-        2 to mutableMapOf(),
-        3 to mutableMapOf()
-    ), private val source: Int = 0
-) : Dsssp() {
-    private var changed = true
-    private val distances = mutableMapOf<Int, Double>()
+class Dijkstra(source: Int = 0) : Dsssp, VerifierState() {
+    class Vertex(
+        var distance: Double = POSITIVE_INFINITY,
+        val outgoing: HashMap<Int, Double> = hashMapOf(),
+        var parent: Vertex? = null
+    )
 
-    @Synchronized
-    override fun getDistance(index: Int): Double? {
-        if (changed) {
-            recompute()
+    private val vertexes = HashMap<Int, Vertex>()
+
+    init {
+        vertexes[source] = Vertex(0.0)
+
+        for (i in 0..INITIAL_GRAPH_SIZE) {
+            addVertex(i)
         }
-        return distances[index]
     }
 
-    @Synchronized
-    private fun recompute() {
-        val pq = PriorityQueue(compareBy<Int> { distances.getOrDefault(it, POSITIVE_INFINITY) })
-        pq.add(source)
+    override fun getDistance(index: Int): Double? {
+        return vertexes[index]?.distance
+    }
 
-        val marked = mutableSetOf<Int>()
-        marked.add(source)
+    override fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean {
+        if (fromIndex == toIndex) return false
+        val from = vertexes[fromIndex] ?: return false
+        val to = vertexes[toIndex] ?: return false
 
-        distances.clear()
-        distances[source] = 0.0
+        val newDist = from.distance + newWeight
 
-        while (pq.isNotEmpty()) {
-            val cur = pq.poll()
-            graph[cur]!!.forEach { (u, w) ->
-                distances[u] = min(distances[cur]!! + w, distances.getOrDefault(u, POSITIVE_INFINITY))
-                if (!marked.contains(u)) {
-                    marked.add(u)
-                    pq.add(u)
+        if (to.distance < newDist && to.parent === from) {
+            // inc
+            throw IncrementalIsNotSupportedException()
+        }
+        if (to.distance > newDist) {
+            // dec
+            to.distance = newDist
+            to.parent = from
+            val priorityQueue = PriorityQueue<Vertex>(compareBy { it.distance })
+            priorityQueue.add(to)
+
+            while (priorityQueue.isNotEmpty()) {
+                val cur = priorityQueue.poll()
+                cur.outgoing.forEach { (i, w) ->
+                    val neighbor = vertexes[i]!!
+                    if (cur.distance + w < neighbor.distance) {
+                        neighbor.parent = cur
+                        neighbor.distance = cur.distance + w
+                        // maybe delete neighbor?
+                        priorityQueue.add(neighbor)
+                    }
                 }
             }
         }
-    }
-
-    @Synchronized
-    override fun setEdge(from: Int, to: Int, newWeight: Double): Boolean {
-        if (!graph.containsKey(from)) {
-            return false
-        }
-        graph[from]!![to] = newWeight
-        changed = true
+        // to.dist = const
+        from.outgoing[toIndex] = newWeight
         return true
     }
 
 
-    @Synchronized
-    override fun removeEdge(from: Int, to: Int): Boolean {
-        if (!graph.containsKey(from)) {
-            return false
-        }
-        if (!graph[from]!!.containsKey(to)) {
-            return false
-        }
-        graph[from]!!.remove(to)
-        changed = true
-        return true
-    }
-
-
-    @Synchronized
     override fun addVertex(index: Int): Boolean {
-        if (graph.containsKey(index)) {
-            return false
-        }
-        graph[index] = mutableMapOf()
-        return true
+        val new = Vertex()
+        val mapped = vertexes.getOrPut(index) { new }
+        return new === mapped
     }
 
-    @Synchronized
+    override fun removeEdge(fromIndex: Int, toIndex: Int): Boolean {
+        TODO()
+    }
+
     override fun removeVertex(index: Int): Boolean {
-        if (!graph.containsKey(index)) {
-            return false
-        }
-        graph.remove(index)
-        return true
+        TODO()
+    }
+
+    override fun extractState(): Any {
+        return vertexes.map { (i, v) -> i to v }
     }
 }
