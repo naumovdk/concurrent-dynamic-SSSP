@@ -2,7 +2,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 
-class Dijkstra(source: Int = 0) : Dsssp, VerifierState() {
+class Recomputing(source: Int = 0) : Dsssp, VerifierState() {
     class Vertex(
         var distance: Double = POSITIVE_INFINITY,
         val outgoing: HashMap<Int, Double> = hashMapOf(),

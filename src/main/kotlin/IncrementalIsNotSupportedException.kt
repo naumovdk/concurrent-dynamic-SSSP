@@ -1,3 +1,1 @@
-class IncrementalIsNotSupportedException : Throwable() {
-
-}
+class IncrementalIsNotSupportedException : Throwable()
