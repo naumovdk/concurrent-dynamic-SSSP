@@ -1,15 +1,13 @@
 package concurrent
 
+import concurrent.Status.*
+
 class LocalDescriptor(
-    val newDist: Distance,
-    val oldDist: Distance,
+    val newDistance: Distance,
+    val oldDistance: Distance,
     val global: GlobalDescriptor
 ) {
     fun readDistance(status: Status): Distance {
-        return when (status) {
-            Status.SUCCESS -> newDist
-            Status.IN_PROGRESS -> oldDist
-            Status.ABORTED -> oldDist
-        }
+        return if (status == SUCCESS) newDistance else oldDistance
     }
 }

@@ -1,11 +1,11 @@
-import concurrent.Concurrent
+import concurrent.ConcurrentDsssp
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class SequentialTest {
     @Test
     fun noIncrementalSupportTest() {
-        val d = Concurrent(0)
+        val d = ConcurrentDsssp(0)
         assert(d.getDistance(1) == Double.POSITIVE_INFINITY)
         assert(d.setEdge(1, 2, 3.0))
         assert(d.setEdge(2, 4, 3.0))
@@ -29,7 +29,7 @@ class SequentialTest {
 
     @Test
     fun cycleTest() {
-        for (d in listOf(Recomputing(), Concurrent())) {
+        for (d in listOf(SequentialDsssp(), ConcurrentDsssp())) {
             assert(d.setEdge(0, 4, 10.0))
             assert(d.setEdge(1, 2, 2.0))
             assert(d.setEdge(2, 3, 2.0))
@@ -43,7 +43,7 @@ class SequentialTest {
 
     @Test
     fun l1() {
-        for (d in listOf(Recomputing(), Concurrent())) {
+        for (d in listOf(SequentialDsssp(), ConcurrentDsssp())) {
             assert(d.setEdge(0, 3, 23.0))
             assertThrows<IncrementalIsNotSupportedException> { d.setEdge(0, 3, 27.0) }
             assert(d.getDistance(5) == Double.POSITIVE_INFINITY)
@@ -52,7 +52,7 @@ class SequentialTest {
 
     @Test
     fun l2() {
-        for (d in listOf(Recomputing(), Concurrent())) {
+        for (d in listOf(SequentialDsssp(), ConcurrentDsssp())) {
             assert(d.setEdge(5, 6, 3.0))
             assert(d.setEdge(5, 2, 11.0))
             assert(d.setEdge(6, 2, 5.0))
@@ -65,14 +65,14 @@ class SequentialTest {
 
     @Test
     fun l3() {
-        val d = Concurrent()
+        val d = ConcurrentDsssp()
         assert(d.setEdge(0, 1, 1.0))
         assert(d.getDistance(1) == 1.0)
     }
 
     @Test
     fun l4() {
-        val d = Concurrent()
+        val d = ConcurrentDsssp()
         assert(d.setEdge(0, 1, 1.0))
         assertThrows<IncrementalIsNotSupportedException> { d.setEdge(0, 1, 11.0) }
         assert(d.getDistance(1) == 1.0)

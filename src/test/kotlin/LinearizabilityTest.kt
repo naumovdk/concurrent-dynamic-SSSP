@@ -1,4 +1,3 @@
-import concurrent.Concurrent
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -13,7 +12,7 @@ import org.junit.jupiter.api.Test
 
 @Param(name = "vertex", gen = IntGen::class, conf = "0:6")
 class LinearizabilityTest {
-    private val impl = Concurrent(0)
+    private val impl = DssspImpl(0)
 
     @Operation(handleExceptionsAsResult = [IncrementalIsNotSupportedException::class])
     fun setEdge(
@@ -32,7 +31,7 @@ class LinearizabilityTest {
         .threads(1)
         .actorsBefore(16)
         .actorsPerThread(1)
-        .sequentialSpecification(Recomputing::class.java)
+        .sequentialSpecification(Dijkstra::class.java)
         .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(true)
         .check(LinearizabilityTest::class.java)
@@ -42,20 +41,21 @@ class LinearizabilityTest {
         .addCustomScenario(scenario {
             parallel {
                 thread {
-                    actor(Concurrent::setEdge, 3, 1, 1.0)
+                    actor(DssspImpl::setEdge, 3, 1, 1.0)
                 }
                 thread {
-                    actor(Concurrent::setEdge, 0, 3, 1.0)
+                    actor(DssspImpl::setEdge, 0, 3, 1.0)
                 }
             }
             post {
-                actor(Concurrent::getDistance, 1)
+                actor(DssspImpl::getDistance, 1)
             }
         })
+        .checkObstructionFreedom(false)
         .threads(2)
         .actorsBefore(15)
         .actorsPerThread(3)
-        .sequentialSpecification(Recomputing::class.java)
+        .sequentialSpecification(Dijkstra::class.java)
         .logLevel(LoggingLevel.INFO)
         .verboseTrace(true)
         .minimizeFailedScenario(true)
@@ -64,9 +64,9 @@ class LinearizabilityTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .threads(3)
-        .actorsBefore(20)
+        .actorsBefore(16)
         .actorsPerThread(3)
-        .sequentialSpecification(Recomputing::class.java)
+        .sequentialSpecification(Dijkstra::class.java)
         .logLevel(LoggingLevel.INFO)
         .verboseTrace(true)
         .minimizeFailedScenario(true)
@@ -74,13 +74,12 @@ class LinearizabilityTest {
 
     @Test
     fun stressTest() = StressOptions()
-        .threads(4)
+        .threads(3)
         .iterations(100)
-        .actorsBefore(50)
+        .actorsBefore(16)
         .actorsPerThread(3)
-        .sequentialSpecification(Recomputing::class.java)
+        .sequentialSpecification(Dijkstra::class.java)
         .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(true)
         .check(LinearizabilityTest::class.java)
-
 }

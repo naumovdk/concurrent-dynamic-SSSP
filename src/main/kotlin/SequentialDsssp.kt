@@ -2,7 +2,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 
-class Recomputing(source: Int = 0) : Dsssp, VerifierState() {
+class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
     class Vertex(
         var distance: Double = POSITIVE_INFINITY,
         val outgoing: HashMap<Int, Double> = hashMapOf(),
@@ -31,8 +31,8 @@ class Recomputing(source: Int = 0) : Dsssp, VerifierState() {
         val newDist = from.distance + newWeight
 
         if (to.distance < newDist && to.parent === from) {
-            // inc
-            throw IncrementalIsNotSupportedException()
+            // do nothing!
+            // no edge being set
         }
         if (to.distance > newDist) {
             // dec
@@ -48,13 +48,11 @@ class Recomputing(source: Int = 0) : Dsssp, VerifierState() {
                     if (cur.distance + w < neighbor.distance) {
                         neighbor.parent = cur
                         neighbor.distance = cur.distance + w
-                        // maybe delete neighbor?
                         priorityQueue.add(neighbor)
                     }
                 }
             }
         }
-        // to.dist = const
         from.outgoing[toIndex] = newWeight
         return true
     }
