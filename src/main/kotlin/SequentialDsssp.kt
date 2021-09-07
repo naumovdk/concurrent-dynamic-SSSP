@@ -31,8 +31,7 @@ class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
         val newDist = from.distance + newWeight
 
         if (to.distance < newDist && to.parent === from) {
-            // do nothing!
-            // no edge being set
+            // todo
         }
         if (to.distance > newDist) {
             // dec
@@ -73,6 +72,6 @@ class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
     }
 
     override fun extractState(): Any {
-        return vertexes.map { (i, v) -> i to v }
+        return vertexes.map { (i, v) -> i to v.distance to v.outgoing }
     }
 }

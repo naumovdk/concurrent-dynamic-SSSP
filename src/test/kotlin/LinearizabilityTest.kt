@@ -1,3 +1,4 @@
+import concurrent.ConcurrentDsssp
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -12,7 +13,7 @@ import org.junit.jupiter.api.Test
 
 @Param(name = "vertex", gen = IntGen::class, conf = "0:6")
 class LinearizabilityTest {
-    private val impl = DssspImpl(0)
+    private val impl = ConcurrentDsssp(0)
 
     @Operation(handleExceptionsAsResult = [IncrementalIsNotSupportedException::class])
     fun setEdge(
@@ -31,7 +32,7 @@ class LinearizabilityTest {
         .threads(1)
         .actorsBefore(16)
         .actorsPerThread(1)
-        .sequentialSpecification(Dijkstra::class.java)
+        .sequentialSpecification(SequentialDsssp::class.java)
         .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(true)
         .check(LinearizabilityTest::class.java)
@@ -41,21 +42,54 @@ class LinearizabilityTest {
         .addCustomScenario(scenario {
             parallel {
                 thread {
-                    actor(DssspImpl::setEdge, 3, 1, 1.0)
+                    actor(ConcurrentDsssp::setEdge, 3, 1, 1.0)
                 }
                 thread {
-                    actor(DssspImpl::setEdge, 0, 3, 1.0)
+                    actor(ConcurrentDsssp::setEdge, 0, 3, 1.0)
                 }
             }
             post {
-                actor(DssspImpl::getDistance, 1)
+                actor(ConcurrentDsssp::getDistance, 1)
             }
         })
-        .checkObstructionFreedom(false)
+        .addCustomScenario {
+            initial {
+                actor(ConcurrentDsssp::setEdge, 0, 1, 1.0)
+                actor(ConcurrentDsssp::setEdge, 4, 2, 1.0)
+            }
+            parallel {
+                thread {
+                    actor(ConcurrentDsssp::setEdge, 3, 4, 1.0)
+                }
+                thread {
+                    actor(ConcurrentDsssp::setEdge, 4, 5, 1.0)
+                }
+            }
+            post {
+                actor(ConcurrentDsssp::getDistance, 4)
+            }
+        }
+        .addCustomScenario {
+            initial {
+                actor(ConcurrentDsssp::setEdge, 5, 3, 3.0)
+                actor(ConcurrentDsssp::setEdge, 4, 1, 3.0)
+                actor(ConcurrentDsssp::setEdge, 3, 4, 9.0)
+                actor(ConcurrentDsssp::setEdge, 3, 1, 39.0)
+            }
+            parallel {
+                thread {
+                    actor(ConcurrentDsssp::setEdge,0, 5, 27.0)
+                }
+                thread {
+                    actor(ConcurrentDsssp::getDistance, 1)
+                }
+            }
+        }
         .threads(2)
         .actorsBefore(15)
         .actorsPerThread(3)
-        .sequentialSpecification(Dijkstra::class.java)
+        .actorsAfter(25)
+        .sequentialSpecification(SequentialDsssp::class.java)
         .logLevel(LoggingLevel.INFO)
         .verboseTrace(true)
         .minimizeFailedScenario(true)
@@ -63,22 +97,22 @@ class LinearizabilityTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
-        .threads(3)
-        .actorsBefore(16)
+        .threads(4)
+        .actorsBefore(15)
         .actorsPerThread(3)
-        .sequentialSpecification(Dijkstra::class.java)
+        .actorsAfter(15)
+        .sequentialSpecification(SequentialDsssp::class.java)
         .logLevel(LoggingLevel.INFO)
-        .verboseTrace(true)
         .minimizeFailedScenario(true)
         .check(this::class.java)
 
     @Test
     fun stressTest() = StressOptions()
-        .threads(3)
-        .iterations(100)
-        .actorsBefore(16)
+        .threads(4)
+        .actorsBefore(15)
         .actorsPerThread(3)
-        .sequentialSpecification(Dijkstra::class.java)
+        .actorsAfter(15)
+        .sequentialSpecification(SequentialTest::class.java)
         .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(true)
         .check(LinearizabilityTest::class.java)

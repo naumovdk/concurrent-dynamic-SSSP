@@ -3,31 +3,35 @@ package concurrent
 import concurrent.Status.*
 import java.util.concurrent.atomic.AtomicReference
 
+
 class Edge(weight: Double, status: AtomicReference<Status>) {
-    class Edges(weight: Double, status: AtomicReference<Status>) {
-        data class Edge(val weight: Double, val status: AtomicReference<Status>)
+    data class EdgeType(val weight: Double, val status: AtomicReference<Status>)
 
-        val oldEdge: Edge = Edge(Double.POSITIVE_INFINITY, AtomicReference(SUCCESS))
-        val newEdge: Edge = Edge(weight, status)
-    }
+    var oldEdge: EdgeType = EdgeType(Double.POSITIVE_INFINITY, AtomicReference(SUCCESS))
+    var newEdge: EdgeType = EdgeType(weight, status)
 
-    private val edges = Edges(weight, status)
-
-    private fun isNewSuccessful(): Boolean {
-        return edges.newEdge.status.get() == IN_PROGRESS
-    }
-
-    fun readEdge(): Double {
-        return if (isNewSuccessful()) {
-            edges.newEdge.weight
+    fun readWeight(): Double {
+        return if (newEdge.status.get() == SUCCESS) {
+            newEdge.weight
         } else {
-            edges.oldEdge.weight
+            oldEdge.weight
         }
     }
 
-    fun setEdge() {
-        edges =  if (isNewSuccessful()) {
-
+    fun set(weight: Double, status: AtomicReference<Status>): Boolean { // todo
+        return when (newEdge.status.get()) {
+            SUCCESS -> {
+                oldEdge = newEdge
+                newEdge = EdgeType(weight, status)
+                true
+            }
+            ABORTED -> {
+                newEdge = EdgeType(weight, status)
+                true
+            }
+            IN_PROGRESS -> {
+                false
+            }
         }
     }
 }

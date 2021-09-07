@@ -1,15 +1,15 @@
 package concurrent
 
-import concurrent.Status.*
 import Dsssp
+import concurrent.Status.ABORTED
+import concurrent.Status.SUCCESS
 import java.util.concurrent.ConcurrentHashMap
-
 
 class ConcurrentDsssp(source: Int = 0) : Dsssp {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
-        vertexes[source] = Vertex(source, 0.0)
+        vertexes[source] = Vertex(0.0)
 
         for (i in 0..INITIAL_GRAPH_SIZE) {
             addVertex(i)
@@ -28,7 +28,12 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
 
         while (true) {
             val threadId = Thread.currentThread().id
-            val global = GlobalDescriptor(threadId)
+            val global = GlobalDescriptor(
+                priority = threadId
+            )
+            global.from = from
+            global.to = to
+            global.newWeight = newWeight
             if (setEdgeOrAbort(from, to, newWeight, global)) {
                 return true
             }
@@ -37,26 +42,25 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
     }
 
     private fun setEdgeOrAbort(from: Vertex, to: Vertex, newWeight: Double, global: GlobalDescriptor): Boolean {
-        val fromDistance = from.acquire(null, global)
-
-        val offeredDistance = Distance(fromDistance.value + newWeight, from)
-        val oldDistance = to.acquire(offeredDistance, global)
-
-        // workaround
-        if (global.status.get() == ABORTED) {
-            return false
+        val new = Edge(newWeight, global.status)
+        val existing = from.outgoing.getOrPut(to) { new }
+        if (existing !== new) {
+            while (true) {
+                if (existing.set(newWeight, global.status)) {
+                    break
+                }
+            }
         }
 
-        // add edge
+        from.acquire(null, global) ?: return false
 
         global.help()
-
         return global.status.get() == SUCCESS
     }
 
 
     override fun addVertex(index: Int): Boolean {
-        val newVertex = Vertex(index)
+        val newVertex = Vertex()
         val mapped = vertexes.getOrPut(index) { newVertex }
         return mapped === newVertex
     }

@@ -1,6 +1,7 @@
 package concurrent
 
 import concurrent.Status.*
+import java.lang.AssertionError
 
 class LocalDescriptor(
     val newDistance: Distance,
@@ -8,6 +9,10 @@ class LocalDescriptor(
     val global: GlobalDescriptor
 ) {
     fun readDistance(status: Status): Distance {
-        return if (status == SUCCESS) newDistance else oldDistance
+        return when(status) {
+            SUCCESS -> newDistance
+            ABORTED -> oldDistance
+            else -> throw AssertionError()
+        }
     }
 }

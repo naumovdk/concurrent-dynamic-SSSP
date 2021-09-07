@@ -66,8 +66,9 @@ class SequentialTest {
     @Test
     fun l3() {
         val d = ConcurrentDsssp()
-        assert(d.setEdge(0, 1, 1.0))
-        assert(d.getDistance(1) == 1.0)
+        assert(d.setEdge(6, 5, 1.0))
+        assert(d.setEdge(6, 0, 1.0))
+        assert(d.getDistance(0) == 0.0)
     }
 
     @Test
@@ -76,5 +77,41 @@ class SequentialTest {
         assert(d.setEdge(0, 1, 1.0))
         assertThrows<IncrementalIsNotSupportedException> { d.setEdge(0, 1, 11.0) }
         assert(d.getDistance(1) == 1.0)
+    }
+
+    @Test
+    fun l5() {
+        val d = ConcurrentDsssp()
+        assert(d.setEdge(4, 1, 11.0))
+        assert(d.setEdge(0, 3, 17.0))
+        assert(d.setEdge(3, 4, 35.0))
+        assert(d.setEdge(1, 2, 37.0))
+        assert(d.getDistance(2) == 11.0 + 17.0 + 35.0 + 37.0)
+    }
+
+    @Test
+    fun l6() {
+        val d = ConcurrentDsssp()
+        assert(d.setEdge(1, 0, 1.0))
+        assert(d.getDistance(0) == 0.0)
+    }
+
+    @Test
+    fun l7() {
+        val d = ConcurrentDsssp()
+        assert(d.setEdge(5, 3, 3.0))
+        assert(d.setEdge(4, 1, 3.0))
+        assert(d.setEdge(3, 4, 9.0))
+        assert(d.setEdge(3, 1, 39.0))
+        d.setEdge(0, 5, 27.0)
+    }
+
+    @Test
+    fun l8() {
+        val d = ConcurrentDsssp()
+        d.setEdge(2,4,21.0)
+        d.setEdge(4,2,31.0)
+        d.setEdge(0,2,39.0)
+        assert(d.getDistance(4) == 60.0)
     }
 }
