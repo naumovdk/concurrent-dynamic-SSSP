@@ -1,8 +1,6 @@
 package concurrent
 
 import Dsssp
-import concurrent.Status.ABORTED
-import concurrent.Status.SUCCESS
 import java.util.concurrent.ConcurrentHashMap
 
 class ConcurrentDsssp(source: Int = 0) : Dsssp {
@@ -11,14 +9,14 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
     init {
         vertexes[source] = Vertex(0.0)
 
-        for (i in 0..INITIAL_GRAPH_SIZE) {
+        for (i in 0..Dsssp.INITIAL_SIZE) {
             addVertex(i)
         }
     }
 
     override fun getDistance(index: Int): Double? {
         val vertex = vertexes[index] ?: return null
-        return vertex.readDistance().value
+        return vertex.getDistance().value
     }
 
     override fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean {
@@ -26,38 +24,22 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
         val from = vertexes[fromIndex] ?: return false
         val to = vertexes[toIndex] ?: return false
 
+        val threadId = Thread.currentThread().id
+
         while (true) {
-            val threadId = Thread.currentThread().id
-            val global = GlobalDescriptor(
-                priority = threadId
-            )
-            global.from = from
-            global.to = to
-            global.newWeight = newWeight
-            if (setEdgeOrAbort(from, to, newWeight, global)) {
+            val process = Process(threadId, newWeight)
+            process.from = from
+            process.to = to
+            val both = BothDescriptors(process)
+
+            process.help()
+
+            if (process.status.value == Status.SUCCESS) {
                 return true
             }
-            assert(global.status.get() == ABORTED)
-        }
-    }
-
-    private fun setEdgeOrAbort(from: Vertex, to: Vertex, newWeight: Double, global: GlobalDescriptor): Boolean {
-        val new = Edge(newWeight, global.status)
-        val existing = from.outgoing.getOrPut(to) { new }
-        if (existing !== new) {
-            while (true) {
-                if (existing.set(newWeight, global.status)) {
-                    break
-                }
-            }
         }
 
-        from.acquire(null, global) ?: return false
-
-        global.help()
-        return global.status.get() == SUCCESS
     }
-
 
     override fun addVertex(index: Int): Boolean {
         val newVertex = Vertex()
@@ -71,5 +53,9 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
 
     override fun removeVertex(index: Int): Boolean {
         TODO()
+    }
+
+    companion object {
+        const val readPriority = 1
     }
 }

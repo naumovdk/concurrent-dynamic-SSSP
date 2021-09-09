@@ -14,7 +14,7 @@ class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
     init {
         vertexes[source] = Vertex(0.0)
 
-        for (i in 0..INITIAL_GRAPH_SIZE) {
+        for (i in 0..Dsssp.INITIAL_SIZE) {
             addVertex(i)
         }
     }

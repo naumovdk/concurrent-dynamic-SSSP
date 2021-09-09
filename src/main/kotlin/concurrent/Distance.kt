@@ -6,6 +6,6 @@ class Distance(val value: Double, val parent: Vertex?) : Comparable<Distance> {
     }
 
     companion object {
-        val INF = Distance(Double.POSITIVE_INFINITY, null)
+        val INF = Distance(Dsssp.INF, null)
     }
 }

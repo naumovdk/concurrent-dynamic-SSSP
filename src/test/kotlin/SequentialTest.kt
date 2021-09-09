@@ -1,4 +1,6 @@
+
 import concurrent.ConcurrentDsssp
+import concurrent.Process
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -113,5 +115,10 @@ class SequentialTest {
         d.setEdge(4,2,31.0)
         d.setEdge(0,2,39.0)
         assert(d.getDistance(4) == 60.0)
+    }
+
+    @Test
+    fun m() {
+        val x = Process.UNINITIALIZED
     }
 }
