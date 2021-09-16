@@ -1,6 +1,11 @@
 package concurrent
 
 import Dsssp
+import INITIAL_SIZE
+import concurrent.process.BothDescriptors
+import concurrent.process.Process
+import concurrent.process.Status
+import concurrent.vertex.Vertex
 import java.util.concurrent.ConcurrentHashMap
 
 class ConcurrentDsssp(source: Int = 0) : Dsssp {
@@ -9,7 +14,7 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
     init {
         vertexes[source] = Vertex(0.0)
 
-        for (i in 0..Dsssp.INITIAL_SIZE) {
+        for (i in 0..INITIAL_SIZE) {
             addVertex(i)
         }
     }
@@ -28,9 +33,10 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
 
         while (true) {
             val process = Process(threadId, newWeight)
+            val both = BothDescriptors(process)
             process.from = from
             process.to = to
-            val both = BothDescriptors(process)
+            process.both = both
 
             process.help()
 

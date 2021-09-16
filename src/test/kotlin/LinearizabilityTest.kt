@@ -11,11 +11,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.jupiter.api.Test
 
 
-@Param(name = "vertex", gen = IntGen::class, conf = "0:6")
+@Param(name = "vertex", gen = IntGen::class, conf = "0:${INITIAL_SIZE}")
 class LinearizabilityTest {
     private val impl = ConcurrentDsssp(0)
 
-    @Operation(handleExceptionsAsResult = [IncrementalIsNotSupportedException::class])
     fun setEdge(
         @Param(name = "vertex") from: Int,
         @Param(name = "vertex") to: Int,
@@ -25,12 +24,10 @@ class LinearizabilityTest {
     @Operation
     fun getDistance(@Param(name = "vertex") v: Int) = impl.getDistance(v)
 
-    fun addVertex(@Param(name = "vertex") v: Int) = impl.addVertex(v)
-
     @Test
     fun singleThreadTest() = ModelCheckingOptions()
         .threads(1)
-        .actorsBefore(16)
+        .actorsBefore(150)
         .actorsPerThread(1)
         .sequentialSpecification(SequentialDsssp::class.java)
         .logLevel(LoggingLevel.INFO)
@@ -43,13 +40,11 @@ class LinearizabilityTest {
             parallel {
                 thread {
                     actor(ConcurrentDsssp::setEdge, 3, 1, 1.0)
+                    actor(ConcurrentDsssp::getDistance, 1)
                 }
                 thread {
                     actor(ConcurrentDsssp::setEdge, 0, 3, 1.0)
                 }
-            }
-            post {
-                actor(ConcurrentDsssp::getDistance, 1)
             }
         })
         .addCustomScenario {
@@ -78,7 +73,7 @@ class LinearizabilityTest {
             }
             parallel {
                 thread {
-                    actor(ConcurrentDsssp::setEdge,0, 5, 27.0)
+                    actor(ConcurrentDsssp::setEdge, 0, 5, 27.0)
                 }
                 thread {
                     actor(ConcurrentDsssp::getDistance, 1)

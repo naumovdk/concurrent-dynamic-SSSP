@@ -1,4 +1,6 @@
-package concurrent
+package concurrent.vertex
+
+import Dsssp
 
 class Distance(val value: Double, val parent: Vertex?) : Comparable<Distance> {
     override fun compareTo(other: Distance): Int {

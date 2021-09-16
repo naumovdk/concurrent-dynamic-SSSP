@@ -1,5 +1,7 @@
 typealias Graph = MutableMap<Int, MutableMap<Int, Double>>
 
+const val INITIAL_SIZE = 10
+
 interface Dsssp {
 
     fun getDistance(index: Int) : Double?
@@ -15,7 +17,5 @@ interface Dsssp {
     companion object {
         val INF: Double
             get() = Double.POSITIVE_INFINITY
-        val INITIAL_SIZE: Int
-            get() = 7
     }
 }
