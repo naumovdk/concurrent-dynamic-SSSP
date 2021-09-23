@@ -23,7 +23,8 @@ class SequentialTest {
     @Test
     fun l7() {
         val d = ConcurrentDsssp()
-        assert(d.setEdge(5, 3, 3.0))
+        val r = d.setEdge(5, 3, 3.0)
+        assert(r)
         assert(d.setEdge(4, 1, 3.0))
         assert(d.setEdge(3, 4, 9.0))
         assert(d.setEdge(3, 1, 39.0))
@@ -64,6 +65,26 @@ class SequentialTest {
         d.setEdge(3,5,1.0)
         d.setEdge(0,4,5.0)
         assert(d.getDistance(3) == 16.0)
-        assert(d.getDistance(3) == 5.0 + 11.0 + 1.0 + 13.0)
+        assert(d.getDistance(2) == 5.0 + 11.0 + 1.0 + 13.0)
     }
+
+    @Test
+    fun l12() {
+        val d = ConcurrentDsssp()
+        d.setEdge(0,2, 3.0)
+        assert(d.getDistance(0) == 0.0)
+    }
+
+    @Test
+    fun l13() {
+        val d = ConcurrentDsssp()
+        d.setEdge(0,7,15.0 + 27.0)
+//        d.setEdge(4, 7, 27.0)
+        d.setEdge(6, 3, 9.0)
+        d.setEdge(3, 2, 15.0)
+        d.setEdge(7, 6, 31.0)
+        d.setEdge(1, 3, 1.0)
+        assert(d.getDistance(2) == 15.0 + 27.0 + 9.0 + 15.0 + 31.0)
+    }
+
 }

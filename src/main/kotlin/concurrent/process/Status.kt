@@ -1,10 +1,21 @@
 package concurrent.process
 
 enum class Status {
-    SUCCESS, ACQUIRE_FROM, ACQUIRE_TO, PLANT_EDGE, SCAN, RELAXATION, ABORTED;
+    ACQUIRE_FROM,
+    UPDATE_FROM_DISTANCE,
+    STORE_OFFERED_DISTANCE,
+    ACQUIRE_TO,
+    UPDATE_TO_DISTANCE,
+    READ_EDGE_EXPECT,
+    UPDATE_EDGE,
+    SCAN,
+    RELAXATION,
+
+    ABORTED,
+    SUCCESS;
 
     fun isInProgress(): Boolean {
-        return this != SUCCESS || this != ABORTED
+        return this !== SUCCESS && this !== ABORTED
     }
 
     fun isFinished(): Boolean {

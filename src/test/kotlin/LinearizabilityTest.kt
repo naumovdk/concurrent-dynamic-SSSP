@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test
 class LinearizabilityTest {
     private val impl = ConcurrentDsssp(0)
 
+    @Operation
     fun setEdge(
         @Param(name = "vertex") from: Int,
         @Param(name = "vertex") to: Int,
@@ -27,8 +28,9 @@ class LinearizabilityTest {
     @Test
     fun singleThreadTest() = ModelCheckingOptions()
         .threads(1)
-        .actorsBefore(150)
+        .actorsBefore(5)
         .actorsPerThread(1)
+        .actorsAfter(3)
         .sequentialSpecification(SequentialDsssp::class.java)
         .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(true)

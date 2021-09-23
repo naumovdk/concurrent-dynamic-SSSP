@@ -2,7 +2,6 @@ package concurrent
 
 import Dsssp
 import INITIAL_SIZE
-import concurrent.process.BothDescriptors
 import concurrent.process.Process
 import concurrent.process.Status
 import concurrent.vertex.Vertex
@@ -33,10 +32,8 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
 
         while (true) {
             val process = Process(threadId, newWeight)
-            val both = BothDescriptors(process)
             process.from = from
             process.to = to
-            process.both = both
 
             process.help()
 
@@ -59,9 +56,5 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
 
     override fun removeVertex(index: Int): Boolean {
         TODO()
-    }
-
-    companion object {
-        const val readPriority = 1
     }
 }
