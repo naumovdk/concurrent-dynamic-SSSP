@@ -101,7 +101,7 @@ class SequentialTest {
     }
 
     @Test
-    fun s() {
+    fun l14() {
         val d = Panigraham()
         d.setEdge(2, 3, 1.0)
         d.setEdge(0, 2, 17.0)
@@ -112,7 +112,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh() {
+    fun l15() {
         val d = SequentialDsssp()
         d.setEdge(3, 0, 21.0)
         d.setEdge(4, 3, 17.0)
@@ -126,7 +126,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh1() {
+    fun l16() {
         val d = SequentialDsssp()
         d.setEdge(3, 4, 35.0)
         d.setEdge(2, 3, 19.0)
@@ -141,7 +141,7 @@ class SequentialTest {
 
 
     @Test
-    fun bruh12() {
+    fun l17() {
         val d = SequentialDsssp()
         d.setEdge(0, 6, 25.0)
         d.setEdge(0, 3, 23.0)
@@ -154,7 +154,7 @@ class SequentialTest {
 
 
     @Test
-    fun bruh13() {
+    fun l18() {
         val d = DijkstraRecomputing()
         d.setEdge(0, 10, 1.0)
         d.setEdge(11, 3, 15.0)
@@ -168,7 +168,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh14() {
+    fun l19() {
         val d = BasicConcurrentDsssp()
         d.setEdge(0, 4, 25.0)
         d.setEdge(4, 3, 39.0)
@@ -177,7 +177,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh2() {
+    fun l20() {
         val d = BasicConcurrentDsssp()
         d.setEdge(5, 1, 37.0)
         d.setEdge(0, 1, 37.0)
@@ -186,7 +186,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh3() {
+    fun l21() {
         val d = BasicConcurrentDsssp()
         d.setEdge(0, 3, 37.0)
         d.setEdge(3, 1, 37.0)
@@ -195,14 +195,14 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh4() {
+    fun l22() {
         val d = BasicConcurrentDsssp()
         d.setEdge(0, 3, 37.0)
         d.setEdge(3, 6, 5.0)
     }
 
     @Test
-    fun bruh5() {
+    fun l23() {
         val d = BasicConcurrentDsssp()
         d.setEdge(1, 3, 9.0)
         d.setEdge(2, 1, 1.0)
@@ -213,7 +213,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh6() {
+    fun l24() {
         val d = BasicConcurrentDsssp()
         d.setEdge(2, 0, 35.0)
         d.setEdge(3, 2, 23.0)
@@ -224,7 +224,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh7() {
+    fun l25() {
         val d = BasicConcurrentDsssp()
         d.setEdge(0, 3, 9.0)
         d.setEdge(3, 2, 1.0)
@@ -233,7 +233,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh8() {
+    fun l26() {
         val d = BasicConcurrentDsssp()
         d.setEdge(1, 0, 1.0)
         d.setEdge(0, 2, 3.0)
@@ -244,7 +244,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh9() {
+    fun l27() {
         val d = BasicConcurrentDsssp()
         d.setEdge(1, 3, 35.0)
         d.setEdge(2, 1, 13.0)
@@ -255,7 +255,7 @@ class SequentialTest {
     }
 
     @Test
-    fun bruh10() {
+    fun l28() {
         val d = BasicConcurrentDsssp()
         d.setEdge(4, 5, 3.0)
         d.setEdge(5, 4, 1.0)
