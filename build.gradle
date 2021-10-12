@@ -6,7 +6,9 @@ buildscript {
 
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.5.21'
+    id "me.champeau.gradle.jmh" version "0.5.0"
 }
+
 
 apply plugin: 'idea'
 apply plugin: 'kotlinx-atomicfu'
@@ -19,7 +21,7 @@ test {
 
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
-    maxHeapSize = "20g"
+    maxHeapSize = "6g"
 }
 
 repositories {
@@ -40,4 +42,26 @@ compileKotlin {
 
 compileTestKotlin {
     kotlinOptions.jvmTarget = '1.8'
+}
+
+jmh {
+    duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+compileJmhKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+sourceSets {
+    jmh {
+        java.srcDirs = ['src/jmh/java']
+        kotlin.srcDirs = ['src/jmh/kotlin']
+        compileClasspath += sourceSets.main.runtimeClasspath
+    }
+}
+
+jmhJar.doFirst {
+    new File("build/resources/test").mkdirs()
 }

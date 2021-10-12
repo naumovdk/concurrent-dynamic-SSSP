@@ -2,27 +2,34 @@ package concurrent.process
 
 enum class Status {
     ACQUIRE_FROM,
-    UPDATE_FROM_DISTANCE,
-    STORE_OFFERED_DISTANCE,
     ACQUIRE_TO,
-    UPDATE_TO_DISTANCE,
-    READ_EDGE_EXPECT,
-    UPDATE_EDGE,
+    UPDATE_OUTGOING,
+    UPDATE_INCOMING,
     SCAN,
     RELAXATION,
+    UPDATE_DISTANCES,
 
     ABORTED,
     SUCCESS;
 
-    fun isInProgress(): Boolean {
-        return this !== SUCCESS && this !== ABORTED
+    fun isInProgress() = when (this) {
+        SUCCESS -> false
+        ABORTED -> false
+        else -> true
     }
 
-    fun isFinished(): Boolean {
-        return !isInProgress()
-    }
+    fun isNotInProgress() = !isInProgress()
 
-    fun isNotInProgress(): Boolean {
-        return !isInProgress()
+    fun next() = when (this) {
+        ACQUIRE_FROM -> ACQUIRE_TO
+        ACQUIRE_TO -> UPDATE_OUTGOING
+        UPDATE_OUTGOING -> UPDATE_INCOMING
+        UPDATE_INCOMING -> SCAN
+        SCAN -> RELAXATION
+        RELAXATION -> UPDATE_DISTANCES
+        UPDATE_DISTANCES -> SUCCESS
+
+        ABORTED -> ABORTED
+        SUCCESS -> SUCCESS
     }
 }

@@ -6,28 +6,22 @@ import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
 import java.util.concurrent.ConcurrentHashMap
 
-class Vertex(distance: Double = Dsssp.INF) {
+class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
+    val incoming = ConcurrentHashMap<Vertex, Edge>()
     val outgoing = ConcurrentHashMap<Vertex, Edge>()
     private val descriptor: AtomicRef<Descriptor> = atomic(Descriptor0(Process.UNINITIALIZED))
     private val distance0 = atomic(Distance(distance, null))
     private val distance1 = atomic(Distance.INF)
 
-    private fun readActualDistance(descriptor: Descriptor, status: Status): Distance {
+    private fun readActual(descriptor: Descriptor, status: Status): Distance {
         return when (descriptor) {
             is Descriptor0 -> if (status == Status.SUCCESS) distance0.value else distance1.value
             is Descriptor1 -> if (status == Status.SUCCESS) distance1.value else distance0.value
         }
     }
 
-    private fun readIrrelevantDistance(descriptor: Descriptor, status: Status): Distance {
-        return when (descriptor) {
-            is Descriptor0 -> if (status == Status.SUCCESS) distance1.value else distance0.value
-            is Descriptor1 -> if (status == Status.SUCCESS) distance0.value else distance1.value
-        }
-    }
-
     private fun readWorking(descriptor: Descriptor): Distance {
-        return when(descriptor) {
+        return when (descriptor) {
             is Descriptor0 -> distance0.value
             is Descriptor1 -> distance1.value
         }
@@ -37,90 +31,96 @@ class Vertex(distance: Double = Dsssp.INF) {
         while (true) {
             val curDescriptor = descriptor.value
             val curStatus = curDescriptor.process.status.value
-            val curDistance = readActualDistance(curDescriptor, curStatus)
+            val curDistance = readActual(curDescriptor, curStatus)
             if (descriptor.value === curDescriptor) {
                 return curDistance
             }
         }
     }
 
-    private fun casWorking(descriptor: Descriptor, expect: Distance, update: Distance): Boolean {
-        return when (descriptor) {
+    /**
+     * @return pair of actual and expect distances or null if initiator has been aborted
+     */
+    fun acquire(initiator: Process): Pair<Distance, Distance>? {
+        while (true) {
+            val curDescriptor = descriptor.value
+            val curStatus = curDescriptor.process.status.value
+            val curActual = readActual(curDescriptor, curStatus)
+
+            if (curDescriptor.process === initiator) {
+                if (curStatus.isNotInProgress()) {
+                    return null
+                }
+                return curActual to readWorking(curDescriptor)
+            }
+
+            if (curStatus.isInProgress()) {
+                initiator.onIntersection(curDescriptor.process)
+                continue
+            }
+
+            val newDescriptor = initiator.new(curDescriptor, curStatus)
+            descriptor.compareAndSet(curDescriptor, newDescriptor)
+        }
+    }
+
+    fun casDistance(expect: Distance, update: Distance): Boolean {
+        return when (descriptor.value) {
             is Descriptor0 -> distance0.compareAndSet(expect, update)
             is Descriptor1 -> distance1.compareAndSet(expect, update)
         }
     }
 
-    fun acquire(process: Process): Distance {
-        while (true) {
-            val curDescriptor = descriptor.value
-            val curStatus = curDescriptor.process.status.value
-            val curIrrelevant = readIrrelevantDistance(curDescriptor, curStatus)
-
-            val newDescriptor = process.new(curDescriptor, curStatus)
-
-            if (curDescriptor.process === process) {
-                return curIrrelevant
-            }
-            if (curStatus.isInProgress()) {
-                process.onIntersection(curDescriptor.process)
-                continue
-            }
-            if (descriptor.compareAndSet(curDescriptor, newDescriptor)) {
-                return curIrrelevant
-            }
-        }
-    }
-
-    fun casDistance(process: Process, expect: Distance, newDistance: Distance): Distance {
-        val curDescriptor = descriptor.value
-        val curStatus = curDescriptor.process.status.value
-        val curActual = readActualDistance(curDescriptor, curStatus)
-
-        val update = if (newDistance < curActual) newDistance else curActual
-
-        if (!casWorking(curDescriptor, expect, update)) {
-            process.status.compareAndSet(curStatus, Status.ABORTED)
-        }
-        return update
-    }
-
-    fun decrement(offeredDistance: Distance, process: Process): Boolean {
-        while (true) {
-            val curDescriptor = descriptor.value
-            val curStatus = curDescriptor.process.status.value
-
-            if (curDescriptor.process === process) {
-                val actual = readActualDistance(curDescriptor, curStatus)
-                val expect = readWorking(curDescriptor)
-                if (offeredDistance < actual) {
-                    if (casWorking(curDescriptor, expect, offeredDistance)) {
-                        return true
-                    }
-                }
-
-                if (casWorking(curDescriptor, expect, actual)) {
-                    return false
-                }
-            }
-
-            if (curStatus.isInProgress()) {
-                process.onIntersection(curDescriptor.process)
-                continue
-            }
-
-            val newDescriptor = process.new(curDescriptor, curStatus)
-            descriptor.compareAndSet(curDescriptor, newDescriptor)
-        }
-    }
-
-    fun plantEdge(expect: Edge?, newWeight: Double, to: Vertex, process: Process): Boolean {
+    fun plantEdge(
+        edges: ConcurrentHashMap<Vertex, Edge>,
+        expect: Edge?,
+        newWeight: Double,
+        to: Vertex,
+        process: Process
+    ): Boolean {
         if (expect == null) {
             val newEdge = Edge(process, Dsssp.INF, newWeight)
-            return outgoing.putIfAbsent(to, newEdge) == null
+            return edges.putIfAbsent(to, newEdge) == null
         }
 
-        val update = Edge(process, expect.read(), newWeight)
-        return outgoing.replace(to, expect, update)
+        val update = Edge(process, expect.read(process), newWeight)
+        return edges.replace(to, expect, update)
+    }
+
+    /**
+     * @return expect distance or null if initiator has been aborted or parents are not equal
+     */
+    fun acquireIfChild(
+        parent: Vertex,
+        initiator: Process
+    ): Distance? {
+        while (true) {
+            val curDescriptor = descriptor.value
+            val curStatus = curDescriptor.process.status.value
+            val curActual = readActual(curDescriptor, curStatus)
+
+            if (curDescriptor.process === initiator) {
+                if (curStatus.isNotInProgress()) {
+                    return null
+                }
+                return readWorking(curDescriptor)
+            }
+
+            if (curStatus.isInProgress()) {
+                initiator.onIntersection(curDescriptor.process)
+                continue
+            }
+
+            val newDescriptor = initiator.new(curDescriptor, curStatus)
+            if (curActual.parent === parent) {
+                descriptor.compareAndSet(curDescriptor, newDescriptor)
+            } else {
+                return null
+            }
+        }
+    }
+
+    override fun compareTo(other: Vertex): Int {
+        return compareValuesBy(this, other) { it.hashCode() }
     }
 }

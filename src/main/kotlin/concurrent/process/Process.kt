@@ -1,19 +1,17 @@
 package concurrent.process
 
+import Dsssp
 import concurrent.process.Status.*
 import concurrent.vertex.Distance
-import concurrent.vertex.Edge
 import concurrent.vertex.QueuedVertex
 import concurrent.vertex.Vertex
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.PriorityBlockingQueue
 
-class Process(
-    private val priority: Long,
-    private val newWeight: Double,
-    status: Status = ACQUIRE_FROM
-) {
+class Process(private val priority: Long, private val newWeight: Double, status: Status = ACQUIRE_FROM) {
     private val descriptor0 = Descriptor0(this)
     private val descriptor1 = Descriptor1(this)
     val status = atomic(status)
@@ -21,20 +19,19 @@ class Process(
     lateinit var to: Vertex
     lateinit var from: Vertex
 
-    private val fromExpect: AtomicRef<Distance?> = atomic(null)
-    private val fromDistance: AtomicRef<Distance?> = atomic(null)
+    private val casMap = ConcurrentHashMap<Vertex, Pair<Distance, Distance>>()
 
-    private val toExpect: AtomicRef<Distance?> = atomic(null)
-    private val toDistance: AtomicRef<Distance?> = atomic(null)
-
-    private val offeredDistance: AtomicRef<Distance?> = atomic(null)
-    private val edgeExpect: AtomicRef<Edge?> = atomic(null)
-
-    private val queue = atomic<PriorityBlockingQueue<QueuedVertex>?>(null)
+    private val priorityQueue = atomic<PriorityBlockingQueue<QueuedVertex>?>(null)
     private val top = atomic<QueuedVertex?>(null)
 
+    private val isIncremental = atomic(false)
+
+    private val workSet: AtomicRef<ConcurrentSkipListSet<Vertex>?> = atomic(null)
+    private val affected: AtomicRef<ConcurrentSkipListSet<Vertex>?> = atomic(null)
+    private val topWorkSet: AtomicRef<Vertex?> = atomic(null)
+
     fun onIntersection(other: Process) {
-        if (this.priority < priority) {
+        if (Dsssp.supportHelp && this.priority < other.priority) {
             other.help()
         } else {
             val curStatus = other.status.value
@@ -47,77 +44,131 @@ class Process(
     fun help() {
         while (true) {
             val curStatus = status.value
-            val (cas: Boolean, nextStatus: Status) = when (curStatus) {
+            when (curStatus) {
                 ACQUIRE_FROM -> {
-                    val update = from.acquire(this)
-                    fromExpect.compareAndSet(null, update)
-                    (fromExpect.value!! === update) to UPDATE_FROM_DISTANCE
+                    val (actual, expect) = from.acquire(this) ?: return
+                    casMap.putIfAbsent(from, expect to actual)
                 }
-                UPDATE_FROM_DISTANCE -> {
-                    val update = from.casDistance(this, fromExpect.value!!, fromExpect.value!!)
-                    fromDistance.compareAndSet(null, update)
-                    (fromDistance.value!! === update) to STORE_OFFERED_DISTANCE
-                }
-
-                STORE_OFFERED_DISTANCE -> {
-                    val update = fromDistance.value!! + newWeight
-                    offeredDistance.compareAndSet(null, update)
-                    (offeredDistance.value!! === update) to ACQUIRE_TO
-                }
-
                 ACQUIRE_TO -> {
-                    val update = to.acquire(this)
-                    toExpect.compareAndSet(null, update)
-                    (toExpect.value!! === update) to UPDATE_TO_DISTANCE
-                }
-                UPDATE_TO_DISTANCE -> {
-                    val update = to.casDistance(this, toExpect.value!!, offeredDistance.value!!)
-                    toDistance.compareAndSet(null, update)
-                    (toDistance.value!! === update) to READ_EDGE_EXPECT
+                    val (actual, expect) = to.acquire(this) ?: return
+                    val offered = Distance(casMap[from]!!.second.value + newWeight, parent = from)
+                    if (actual.parent === from && offered > actual) {
+                        isIncremental.getAndSet(true)
+                    }
+                    val update = if (offered < actual) {
+                        offered
+                    } else {
+                        actual
+                    }
+                    if (Dsssp.supportInc && actual.parent === from && offered > actual) {
+                        isIncremental.getAndSet(true)
+                    } else {
+                        casMap.putIfAbsent(to, expect to update)
+                    }
                 }
 
-                READ_EDGE_EXPECT -> {
-                    val update = from.outgoing[to]
-                    edgeExpect.compareAndSet(null, update)
-                    (edgeExpect.value === update) to UPDATE_EDGE
-                }
-                UPDATE_EDGE -> {
-                    from.plantEdge(edgeExpect.value, newWeight, to, this) to SCAN
-                }
+                UPDATE_OUTGOING -> from.plantEdge(from.outgoing, from.outgoing[to], newWeight, to, this)
+
+                UPDATE_INCOMING -> to.plantEdge(to.incoming, to.incoming[from], newWeight, from, this)
 
                 SCAN -> {
-                    val newQueue = PriorityBlockingQueue<QueuedVertex>(1)
-                    newQueue.add(QueuedVertex(to, offeredDistance.value!!.value))
-                    queue.compareAndSet(null, newQueue)
-                    // inc
-                    true to RELAXATION
-                }
-                RELAXATION -> {
-                    val queue = queue.value!!
-                    while (true) {
-                        val update = queue.peek() ?: break
-                        top.compareAndSet(null, update)
-                        val readTop = top.value ?: continue
-                        val (cur, curDistance) = readTop
+                    if (isIncremental.value && Dsssp.supportInc) {
+                        workSet.compareAndSet(null, ConcurrentSkipListSet(listOf(to)))
+                        affected.compareAndSet(null, ConcurrentSkipListSet())
 
-                        for ((neighbor, edge) in cur.outgoing) {
-                            val w = edge.read()
-                            val newDistance = Distance(curDistance + w, parent = cur)
-                            if (neighbor.decrement(newDistance, this)) {
-                                queue.add(QueuedVertex(neighbor, newDistance.value))
+                        val workSet = workSet.value!!
+                        val affected = affected.value!!
+
+                        while (workSet.isNotEmpty()) {
+                            val first = try {
+                                workSet.first()
+                            } catch (e: NoSuchElementException) {
+                                break
+                            }
+
+                            topWorkSet.compareAndSet(null, first)
+                            val cur = topWorkSet.value ?: continue
+
+                            affected.add(cur)
+
+                            for (neighbor in cur.outgoing.keys()) {
+                                if (!affected.contains(neighbor) && neighbor !== from) {
+                                    val expect = neighbor.acquireIfChild(cur, this) ?: continue
+                                    casMap.putIfAbsent(neighbor, expect to Distance.INF)
+                                    workSet.add(neighbor)
+                                }
+                            }
+
+                            topWorkSet.compareAndSet(first, null)
+                            workSet.remove(first)
+                        }
+
+                        val starting = mutableSetOf<QueuedVertex>()
+                        for (a in affected) {
+                            for (parent in a.incoming.keys()) {
+                                if (!affected.contains(parent)) {
+                                    val (actual, expect) = parent.acquire(this) ?: return
+                                    starting.add(QueuedVertex(parent, actual))
+                                    casMap.putIfAbsent(parent, expect to actual)
+                                }
                             }
                         }
 
-                        queue.remove(update)
-                        top.compareAndSet(readTop, null)
+                        priorityQueue.compareAndSet(null, PriorityBlockingQueue(starting))
                     }
-                    true to SUCCESS
+                }
+
+                RELAXATION -> {
+                    val q = priorityQueue.value ?: run {
+                        priorityQueue.compareAndSet(
+                            null,
+                            PriorityBlockingQueue(listOf(QueuedVertex(to, casMap[to]!!.second)))
+                        )
+                        priorityQueue.value!!
+                    }
+                    while (Dsssp.supportDec) {
+                        val update = q.peek() ?: break
+
+                        top.compareAndSet(null, update)
+                        val readTop = top.value ?: continue
+
+                        val (cur, curDistance) = readTop
+
+                        for ((neighbor, edge) in cur.outgoing) {
+                            val (actual, expect) = neighbor.acquire(this) ?: return
+
+                            val w = edge.read(this)
+                            val offered = Distance(curDistance.value + w, parent = cur)
+                            val newDistance =
+                                if (Dsssp.supportInc && isIncremental.value && affected.value!!.contains(neighbor) || offered < actual)
+                                    offered else actual
+
+                            casMap.compute(neighbor) { _, mapped ->
+                                if (mapped == null || newDistance < mapped.second) {
+                                    q.add(QueuedVertex(neighbor, newDistance))
+                                    expect to newDistance
+                                } else {
+                                    mapped
+                                }
+                            }
+                        }
+
+                        top.compareAndSet(readTop, null)
+                        q.remove(update)
+                    }
+                }
+
+                UPDATE_DISTANCES -> {
+                    for ((vertex, distances) in casMap) {
+                        val (expect, actual) = distances
+                        if (!vertex.casDistance(expect, actual.copy())) return
+                    }
                 }
                 SUCCESS -> return
                 ABORTED -> return
             }
-            val newStatus = if (cas) nextStatus else ABORTED
-            status.compareAndSet(curStatus, newStatus)
+
+            status.compareAndSet(curStatus, curStatus.next())
         }
     }
 

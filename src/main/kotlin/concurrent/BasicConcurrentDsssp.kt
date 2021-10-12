@@ -7,7 +7,7 @@ import concurrent.process.Status
 import concurrent.vertex.Vertex
 import java.util.concurrent.ConcurrentHashMap
 
-class ConcurrentDsssp(source: Int = 0) : Dsssp {
+class BasicConcurrentDsssp(source: Int = 0) : Dsssp {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
@@ -40,6 +40,8 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
             if (process.status.value == Status.SUCCESS) {
                 return true
             }
+            process.status.getAndSet(Status.ABORTED)
+            assert(process.status.value == Status.ABORTED)
         }
 
     }
@@ -55,6 +57,10 @@ class ConcurrentDsssp(source: Int = 0) : Dsssp {
     }
 
     override fun removeVertex(index: Int): Boolean {
+        TODO()
+    }
+
+    override fun getAllDistances(): Map<Int, Double> {
         TODO()
     }
 }
