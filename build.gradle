@@ -54,6 +54,16 @@ compileJmhKotlin {
     }
 }
 
+task benchmarkJar(type: Jar, dependsOn: jmhJar) {
+    manifest {
+        attributes 'Main-Class': 'benchmarks.BenchmarksKt'
+    }
+    from {
+        (jmhJar.outputs.files + configurations.jmh + configurations.jmhRuntime)
+                .collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
 sourceSets {
     jmh {
         java.srcDirs = ['src/jmh/java']

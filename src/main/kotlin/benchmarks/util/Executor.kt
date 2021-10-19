@@ -6,9 +6,14 @@ import kotlin.random.Random.Default.nextDouble
 
 class BenchmarkThread(val threadId: Int, target: () -> Unit) : Thread(target)
 
-class Executor(private val impl: Dsssp, private val threads: Int, private val operations: Int) {
+class Executor(
+    private val impl: Dsssp,
+    private val threads: Int,
+    private val operations: Int,
+    private val readProbability: Double
+) {
     fun run() {
-        val per = operations / threads
+        val per = if (operations / threads != 0) operations / threads else 1
         val ts = Array(threads) { threadId ->
             BenchmarkThread(threadId) {
                 for (i in 0..per) {
@@ -16,11 +21,11 @@ class Executor(private val impl: Dsssp, private val threads: Int, private val op
                     val u = (0..INITIAL_SIZE).random()
                     val v = (0..INITIAL_SIZE).random()
                     when {
-                        r < 0.5 -> {
-                            impl.setEdge(u, v, r)
-                        }
-                        r >= 0.5 -> {
+                        r < readProbability -> {
                             impl.getDistance(u)
+                        }
+                        else -> {
+                            impl.setEdge(u, v, r)
                         }
                     }
                 }

@@ -18,18 +18,21 @@ import kotlin.jvm.Throws
 
 @State(Scope.Thread)
 @BenchmarkMode(Mode.All)
-@Measurement(iterations = 1, time = 3, timeUnit = TimeUnit.SECONDS)
-@Warmup(iterations = 0)
+@Measurement(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 2)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(value = 2, jvmArgs = ["-Xms2G", "-Xmx2G"])
 open class SmallBenchmark {
-    @Param("1", "2", "4", "8", "16", "32")
+    @Param("1", "2", "4", "8", "16", "32", "64", "128")
     open var workers: Int = 0
 
-    private val operations = 32*32
+    @Param("0.5", "0.9", "0.99")
+    open var readProbability: Double = 0.0
+
+    private val operations = 1
 
     private fun benchmark(impl: Dsssp) {
-        Executor(impl, workers, operations).run()
+        Executor(impl, workers, operations, readProbability).run()
     }
 
     @Benchmark
