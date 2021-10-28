@@ -1,17 +1,32 @@
 const val INITIAL_SIZE = 100
 
-interface Dsssp {
-    fun getDistance(index: Int): Double?
+abstract class Dsssp {
+    private var inputGraph = InputGraph(0, listOf(), 0, 0)
 
-    fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean
+    abstract fun getDistance(index: Int): Int?
 
-    fun removeEdge(fromIndex: Int, toIndex: Int): Boolean
+    abstract fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean
 
-    fun addVertex(index: Int): Boolean
+    abstract fun removeEdge(fromIndex: Int, toIndex: Int): Boolean
 
-    fun removeVertex(index: Int): Boolean
+    abstract fun addVertex(index: Int): Boolean
 
-    fun getAllDistances(): Map<Int, Double>
+    abstract fun removeVertex(index: Int): Boolean
+
+    constructor()
+
+    constructor(inputGraph: InputGraph) {
+        this.inputGraph = inputGraph
+    }
+
+    init {
+        for (e in inputGraph.edges) {
+            val (u, v, w) = e
+            this.addVertex(u)
+            this.addVertex(v)
+            this.setEdge(u, v, w.toDouble())
+        }
+    }
 
     companion object {
         val INF: Double

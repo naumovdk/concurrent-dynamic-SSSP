@@ -9,14 +9,14 @@ import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.jupiter.api.Test
-import sequential.DijkstraRecomputing
 import sequential.SequentialDsssp
 
 
 @Param(name = "vertex", gen = IntGen::class, conf = "0:${INITIAL_SIZE}")
 class LinearizabilityTest {
-    private val impl = BasicConcurrentDsssp()
-    private val seq = SequentialDsssp()
+    private val emptyGraph = InputGraph(INITIAL_SIZE, listOf(), 0, 0)
+    private val impl = BasicConcurrentDsssp(emptyGraph)
+    private val seq = SequentialDsssp(emptyGraph)
 
     @Operation
     fun setEdge(

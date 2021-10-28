@@ -2,12 +2,13 @@ package concurrent
 
 import Dsssp
 import INITIAL_SIZE
+import InputGraph
 import concurrent.process.Process
 import concurrent.process.Status
 import concurrent.vertex.Vertex
 import java.util.concurrent.ConcurrentHashMap
 
-class BasicConcurrentDsssp(source: Int = 0) : Dsssp {
+class BasicConcurrentDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGraph) {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
@@ -18,9 +19,9 @@ class BasicConcurrentDsssp(source: Int = 0) : Dsssp {
         }
     }
 
-    override fun getDistance(index: Int): Double? {
+    override fun getDistance(index: Int): Int? {
         val vertex = vertexes[index] ?: return null
-        return vertex.getDistance().value
+        return vertex.getDistance().value.toInt()
     }
 
     override fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean {
@@ -57,10 +58,6 @@ class BasicConcurrentDsssp(source: Int = 0) : Dsssp {
     }
 
     override fun removeVertex(index: Int): Boolean {
-        TODO()
-    }
-
-    override fun getAllDistances(): Map<Int, Double> {
         TODO()
     }
 }

@@ -1,7 +1,7 @@
 package benchmarks
 
 import Dsssp
-import SequentialTest
+import InputGraph
 import bapi.Panigraham
 import benchmarks.util.Executor
 import concurrent.BasicConcurrentDsssp
@@ -17,50 +17,52 @@ import kotlin.jvm.Throws
 
 
 @State(Scope.Thread)
-@BenchmarkMode(Mode.All)
-@Measurement(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
-@Warmup(iterations = 2)
+@BenchmarkMode(Mode.AverageTime)
+@Measurement(iterations = 1, time = 3, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 0)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Fork(value = 2, jvmArgs = ["-Xms2G", "-Xmx2G"])
+@Fork(1)
 open class SmallBenchmark {
-    @Param("1", "2", "4", "8", "16", "32", "64", "128")
+//    @Param("1", "2", "4", "8", "16", "32", "64", "128")
+    @Param("1")
     open var workers: Int = 0
 
     @Param("0.5", "0.9", "0.99")
     open var readProbability: Double = 0.0
 
+    @Param("NY")
+    open var graphName: String = ""
+
+    @Param("1", "2")
+    open var implIndex: Int = 0
+
+    private val impls = listOf(
+        { g: InputGraph -> BasicConcurrentDsssp(g) },
+        { g: InputGraph -> SequentialDsssp(g) },
+        { g: InputGraph -> DijkstraRecomputing(g) })
+
+    var impl: Dsssp? = null
+    var graph: InputGraph? = null
+
     private val operations = 1
 
-    private fun benchmark(impl: Dsssp) {
-        Executor(impl, workers, operations, readProbability).run()
+    private fun benchmark() {
+        Executor(impl!!, workers, operations, readProbability, graph!!).run()
     }
 
-    @Benchmark
-    fun benchmarkDijkstraRecomputing() {
-        benchmark(DijkstraRecomputing())
-    }
-
-    @Benchmark
-    fun benchmarkSequentialDsssp() {
-        benchmark(SequentialDsssp())
-    }
-
-    @Benchmark
-    fun benchmarkPanigraham() {
-        benchmark(Panigraham())
-    }
-
-    @Benchmark
-    fun benchmarkBasicConcurrentDsssp() {
-        benchmark(BasicConcurrentDsssp())
+    @Setup(Level.Invocation)
+    fun initialize() {
+        graph = Graph.getGraph(graphName)
+        impl = impls[implIndex](graph!!)
     }
 }
 
 @Throws(RunnerException::class)
 fun main() {
-    Runner(OptionsBuilder().
-        include(SequentialTest::class.java.simpleName)
-        .resultFormat(ResultFormatType.CSV)
-        .result("results_50_50.csv")
-        .build())
+    Runner(
+        OptionsBuilder().include(SmallBenchmark::class.java.simpleName)
+            .resultFormat(ResultFormatType.CSV)
+            .result("results.csv")
+            .build()
+    )
 }

@@ -1,8 +1,10 @@
 package benchmarks.util
 
 import Dsssp
-import INITIAL_SIZE
-import kotlin.random.Random.Default.nextDouble
+import InputGraph
+import kotlinx.atomicfu.AtomicInt
+import kotlinx.atomicfu.atomic
+import java.util.concurrent.atomic.AtomicInteger
 
 class BenchmarkThread(val threadId: Int, target: () -> Unit) : Thread(target)
 
@@ -10,27 +12,29 @@ class Executor(
     private val impl: Dsssp,
     private val threads: Int,
     private val operations: Int,
-    private val readProbability: Double
+    private val readWriteRatio: Double,
+    private val graph: InputGraph
 ) {
     fun run() {
-        val per = if (operations / threads != 0) operations / threads else 1
-        val ts = Array(threads) { threadId ->
+        val cnt = AtomicInteger(0)
+        val scenario = ScenarioGenerator.generate(operations, readWriteRatio, graph.nodes, graph.maxWeight)
+        Array(threads) { threadId ->
             BenchmarkThread(threadId) {
-                for (i in 0..per) {
-                    val r = nextDouble()
-                    val u = (0..INITIAL_SIZE).random()
-                    val v = (0..INITIAL_SIZE).random()
-                    when {
-                        r < readProbability -> {
-                            impl.getDistance(u)
-                        }
-                        else -> {
-                            impl.setEdge(u, v, r)
-                        }
+                var i = cnt.incrementAndGet()
+                while (i < operations) {
+                    val u = scenario[3 * i]
+                    val v = scenario[3 * i + 1]
+                    val w = scenario[3 * i + 2]
+
+                    val isRead = v == 0 && w == 0
+                    if (isRead) {
+                        impl.getDistance(v)
+                    } else {
+                        impl.setEdge(u, v, w.toDouble())
                     }
+                    i = cnt.incrementAndGet()
                 }
             }
-        }
-        ts.forEach { it.start() }
+        }.forEach { it.start() }
     }
 }

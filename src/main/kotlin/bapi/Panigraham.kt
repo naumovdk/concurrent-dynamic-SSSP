@@ -2,11 +2,12 @@ package bapi
 
 import Dsssp
 import INITIAL_SIZE
+import InputGraph
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.HashMap
 
-class Panigraham(private val source: Int = 0) : Dsssp {
+class Panigraham(inputGraph: InputGraph, private val source: Int = 0) : Dsssp(inputGraph) {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
@@ -22,8 +23,8 @@ class Panigraham(private val source: Int = 0) : Dsssp {
 
     }
 
-    override fun getDistance(index: Int): Double? {
-        return sssp()[index] ?: Dsssp.INF
+    override fun getDistance(index: Int): Int? {
+        return (sssp()[index] ?: Dsssp.INF) as Int?
     }
 
     private fun sssp(): Map<Int, Double> {
@@ -74,10 +75,6 @@ class Panigraham(private val source: Int = 0) : Dsssp {
     }
 
     override fun removeVertex(index: Int): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAllDistances(): Map<Int, Double> {
         TODO("Not yet implemented")
     }
 }

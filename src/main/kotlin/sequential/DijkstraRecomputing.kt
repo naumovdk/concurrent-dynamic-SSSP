@@ -2,13 +2,15 @@ package sequential
 
 import Dsssp
 import INITIAL_SIZE
+import InputGraph
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 
 
-class DijkstraRecomputing(private val source: Int = 0) : Dsssp {
+class DijkstraRecomputing(inputGraph: InputGraph, private val source: Int = 0) : Dsssp(inputGraph) {
     private val graph: MutableMap<Int, MutableMap<Int, Double>> = mutableMapOf()
     private val distances = mutableMapOf<Int, Double>()
+    private var changed = true
 
     init {
         graph[source] = mutableMapOf()
@@ -19,15 +21,18 @@ class DijkstraRecomputing(private val source: Int = 0) : Dsssp {
     }
 
     @Synchronized
-    override fun getDistance(index: Int): Double? {
-        recompute()
-        return distances[index]
+    override fun getDistance(index: Int): Int? {
+        if (changed) {
+            recompute()
+        }
+        changed = false
+        return distances[index]?.toInt()
     }
 
     @Synchronized
     private fun recompute() {
         distances.forEach { (k, _) ->
-            distances[k] = Dsssp.INF
+            distances[k] = INF
         }
         distances[source] = 0.0
 
@@ -38,7 +43,7 @@ class DijkstraRecomputing(private val source: Int = 0) : Dsssp {
             val cur = pq.poll()
             for ((index, w) in graph[cur]!!) {
                 val offeredDistance = distances[cur]!! + w
-                val curDistance = distances.getOrDefault(index, Dsssp.INF)
+                val curDistance = distances.getOrDefault(index, INF)
                 if (offeredDistance < curDistance) {
                     distances[index] = offeredDistance
                     pq.filter { it != index }
@@ -55,6 +60,8 @@ class DijkstraRecomputing(private val source: Int = 0) : Dsssp {
         if (!graph.containsKey(toIndex)) return false
 
         graph[fromIndex]!![toIndex] = newWeight
+        changed = true
+
         return true
     }
 
@@ -71,7 +78,7 @@ class DijkstraRecomputing(private val source: Int = 0) : Dsssp {
         if (graph.containsKey(index)) return false
 
         graph[index] = mutableMapOf()
-        distances[index] = Dsssp.INF
+        distances[index] = INF
         return true
     }
 
@@ -81,9 +88,5 @@ class DijkstraRecomputing(private val source: Int = 0) : Dsssp {
         }
         graph.remove(index)
         return true
-    }
-
-    override fun getAllDistances(): Map<Int, Double> {
-        TODO("Not yet implemented")
     }
 }

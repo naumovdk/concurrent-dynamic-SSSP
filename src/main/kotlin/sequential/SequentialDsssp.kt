@@ -2,12 +2,13 @@ package sequential
 
 import Dsssp
 import INITIAL_SIZE
+import InputGraph
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 import kotlin.collections.HashMap
 
-class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
+class SequentialDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGraph) {
     class Vertex(
         var distance: Double = POSITIVE_INFINITY,
         val outgoing: HashMap<Int, Double> = hashMapOf(),
@@ -27,8 +28,8 @@ class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
     }
 
     @Synchronized
-    override fun getDistance(index: Int): Double? {
-        return vertexes[index]?.distance
+    override fun getDistance(index: Int): Int? {
+        return vertexes[index]?.distance?.toInt()
     }
 
     @Synchronized
@@ -106,11 +107,7 @@ class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
         TODO()
     }
 
-    override fun getAllDistances(): Map<Int, Double> {
-        return vertexes.map { it.key to it.value.distance }.toMap()
-    }
-
-    override fun extractState(): Any {
-        return vertexes.map { (i, v) -> i to v.distance to v.outgoing }
-    }
+//    override fun extractState(): Any {
+//        return vertexes.map { (i, v) -> i to v.distance to v.outgoing }
+//    }
 }
