@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 
 
 @State(Scope.Thread)
-@BenchmarkMode(Mode.AverageTime, Mode.Throughput)
+@BenchmarkMode(Mode.AverageTime)
 @Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.MILLISECONDS)
 @Warmup(iterations = 2, time = 1, timeUnit = TimeUnit.MILLISECONDS)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -42,7 +42,7 @@ open class SmallBenchmark {
         { DijkstraRecomputing() }
     )
 
-    private val operations = 100000
+    private val operations = 1000000
     private var graph: InputGraph? = null
     private var impl: Dsssp? = null
 

@@ -32,7 +32,6 @@ class Executor(
                     }
                     i = cnt.incrementAndGet()
                 }
-                println("Thread is finished")
             }
         }
         ts.forEach { it.start() }
