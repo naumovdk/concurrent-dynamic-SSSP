@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime, Mode.Throughput)
-@Measurement(iterations = 4, time = 3, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.MILLISECONDS)
 @Warmup(iterations = 2)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(1)
@@ -26,13 +26,13 @@ open class SmallBenchmark {
     @Param("1", "2", "4", "8", "16", "32", "64", "128")
     open var workers: Int = 0
 
-    @Param("0.5", "0.9", "0.99")
+    @Param("0.99")
     open var readWriteRatio: Double = 0.0
 
-    @Param("NY", "WEST", "USA")
+    @Param("NY")
     open var graphName: String = ""
 
-    @Param("0", "1", "2", "3")
+    @Param("0")
     open var implIndex: Int = 0
 
     private val impls = listOf(
@@ -42,7 +42,7 @@ open class SmallBenchmark {
         { DijkstraRecomputing() }
     )
 
-    private val operations = 1
+    private val operations = 10000
     private var graph: InputGraph? = null
     private var impl: Dsssp? = null
 
@@ -52,6 +52,10 @@ open class SmallBenchmark {
     @Setup(Level.Trial)
     fun setup() {
         graph = Graph.getGraph(graphName)
+    }
+
+    @Setup(Level.Invocation)
+    fun setup_() {
         impl = impls[implIndex].invoke().fit(graph!!)
     }
 }
