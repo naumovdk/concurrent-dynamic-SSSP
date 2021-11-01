@@ -42,7 +42,7 @@ open class SmallBenchmark {
         { DijkstraRecomputing() }
     )
 
-    private val operations = 8192
+    private val operations = 100
     private var graph: InputGraph? = null
     private var impl: Dsssp? = null
 
