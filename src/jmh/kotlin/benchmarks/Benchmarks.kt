@@ -29,7 +29,7 @@ open class SmallBenchmark {
     @Param("0.5", "0.9", "0.99")
     open var readWriteRatio: Double = 0.0
 
-    @Param("USA", "NY", "WEST")
+    @Param("WEST", "NY")
     open var graphName: String = ""
 
     @Param("0", "1", "2", "3")
