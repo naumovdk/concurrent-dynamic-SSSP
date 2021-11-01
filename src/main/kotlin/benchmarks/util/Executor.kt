@@ -16,7 +16,7 @@ class Executor(
     fun run() {
         val cnt = AtomicInteger(0)
         val scenario = ScenarioGenerator.generate(operations, readWriteRatio, graph.nodes, graph.maxWeight)
-        Array(threads) { threadId ->
+        val ts = Array(threads) { threadId ->
             BenchmarkThread(threadId) {
                 var i = cnt.incrementAndGet()
                 while (i < operations) {
@@ -32,7 +32,10 @@ class Executor(
                     }
                     i = cnt.incrementAndGet()
                 }
+                println("Thread is finished")
             }
-        }.forEach { it.start() }
+        }
+        ts.forEach { it.start() }
+        ts.forEach { it.join() }
     }
 }

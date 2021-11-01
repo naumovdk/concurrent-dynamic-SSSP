@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime, Mode.Throughput)
 @Measurement(iterations = 4, time = 3, timeUnit = TimeUnit.SECONDS)
-@Warmup(iterations = 0)
+@Warmup(iterations = 2)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(1)
 open class SmallBenchmark {
@@ -29,7 +29,7 @@ open class SmallBenchmark {
     @Param("0.5", "0.9", "0.99")
     open var readWriteRatio: Double = 0.0
 
-    @Param("WEST", "NY")
+    @Param("NY", "WEST", "USA")
     open var graphName: String = ""
 
     @Param("0", "1", "2", "3")
@@ -42,16 +42,15 @@ open class SmallBenchmark {
         { DijkstraRecomputing() }
     )
 
-    private val operations = 100
+    private val operations = 1
     private var graph: InputGraph? = null
     private var impl: Dsssp? = null
 
     @Benchmark
-    fun benchmark() =
-        Executor(impl!!, workers, operations, readWriteRatio, graph!!).run()
+    fun benchmark() = Executor(impl!!, workers, operations, readWriteRatio, graph!!).run()
 
     @Setup(Level.Trial)
-    fun f() {
+    fun setup() {
         graph = Graph.getGraph(graphName)
         impl = impls[implIndex].invoke().fit(graph!!)
     }
@@ -64,5 +63,5 @@ fun main() {
             .resultFormat(ResultFormatType.CSV)
             .result("results.csv")
             .build()
-    )
+    ).run()
 }

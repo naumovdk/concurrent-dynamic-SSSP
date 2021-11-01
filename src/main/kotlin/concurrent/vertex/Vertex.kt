@@ -20,7 +20,7 @@ class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
         }
     }
 
-    fun readWorking(descriptor: Descriptor): Distance {
+    private fun readWorking(descriptor: Descriptor): Distance {
         return when (descriptor) {
             is Descriptor0 -> distance0.value
             is Descriptor1 -> distance1.value
@@ -64,7 +64,7 @@ class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
         }
     }
 
-    fun acquire2(initiator: Process): Pair<Distance, Distance>? {
+    fun acquireAndCas(initiator: Process): Pair<Distance, Distance>? {
         while (true) {
             val curDescriptor = descriptor.value
             val curStatus = curDescriptor.process.status.value

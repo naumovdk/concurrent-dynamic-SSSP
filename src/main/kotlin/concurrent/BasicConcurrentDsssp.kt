@@ -35,7 +35,7 @@ class BasicConcurrentDsssp(source: Int = 0) : Dsssp() {
             process.from = from
             process.to = to
 
-            start(process)
+            process.start()
 
             if (process.status.value == Status.SUCCESS) {
                 return true
@@ -44,8 +44,6 @@ class BasicConcurrentDsssp(source: Int = 0) : Dsssp() {
             assert(process.status.value == Status.ABORTED)
         }
     }
-
-    private fun start(process: Process) = process.help()
 
     override fun addVertex(index: Int): Boolean {
         val newVertex = Vertex()
