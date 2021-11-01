@@ -1,9 +1,20 @@
-const val INITIAL_SIZE = 100
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
-abstract class Dsssp {
-    private var inputGraph = InputGraph(0, listOf(), 0, 0)
+const val INITIAL_SIZE = 10
 
-    abstract fun getDistance(index: Int): Int?
+abstract class Dsssp : VerifierState() {
+
+    fun fit(inputGraph: InputGraph): Dsssp {
+        for (e in inputGraph.edges) {
+            val (u, v, w) = e
+            this.addVertex(u)
+            this.addVertex(v)
+            this.setEdge(u, v, w.toDouble())
+        }
+        return this
+    }
+
+    abstract fun getDistance(index: Int): Double?
 
     abstract fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean
 
@@ -13,27 +24,12 @@ abstract class Dsssp {
 
     abstract fun removeVertex(index: Int): Boolean
 
-    constructor()
-
-    constructor(inputGraph: InputGraph) {
-        this.inputGraph = inputGraph
-    }
-
-    init {
-        for (e in inputGraph.edges) {
-            val (u, v, w) = e
-            this.addVertex(u)
-            this.addVertex(v)
-            this.setEdge(u, v, w.toDouble())
-        }
-    }
-
     companion object {
         val INF: Double
             get() = Double.POSITIVE_INFINITY
 
         const val supportDec = true
-        const val supportInc = true
+        const val supportInc = false
         const val supportHelp = true
     }
 }

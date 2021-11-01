@@ -6,7 +6,6 @@ import java.lang.Integer.min
 import java.net.URL
 import java.nio.channels.Channels
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.zip.GZIPInputStream
 import kotlin.io.path.Path
 
@@ -15,15 +14,19 @@ data class InputGraph(val nodes: Int, val edges: List<InputEdge>, val minWeight:
 
 class Graph {
     companion object {
+//        private const val path = "C:/Users/dimna/IdeaProjects/concurrent-dynamic-SSSP/graphs/"
         private const val path = "./graphs/"
 
+        val emptyGraph = InputGraph(INITIAL_SIZE, listOf(), 0, 0)
+
         private val urls = mapOf(
-            "NY" to "http://www.diag.uniroma1.it//challenge9/data/USA-road-d/USA-road-d.NY.gr.gz",
-            "USA" to "http://www.diag.uniroma1.it//challenge9/data/USA-road-d/USA-road-d.USA.gr.gz"
+            "NY" to "https://www.diag.uniroma1.it//challenge9/data/USA-road-d/USA-road-d.NY.gr.gz",
+            "USA" to "https://www.diag.uniroma1.it//challenge9/data/USA-road-d/USA-road-d.USA.gr.gz",
+            "WEST" to "https://www.diag.uniroma1.it//challenge9/data/USA-road-d/USA-road-d.W.gr.gz"
         )
 
         private fun downloadGraph(name: String) {
-            println("start")
+            println("Downloading")
             val input = Channels.newChannel(URL(urls[name]!!).openStream())
             if (!Files.exists(Path(path + name))) {
                 val output = FileOutputStream(path + name)
@@ -31,7 +34,7 @@ class Graph {
                 input.close()
                 output.close()
             }
-            println("finish")
+            println("Finished")
         }
 
         private fun parseGrFile(file: String, gzipped: Boolean): InputGraph {
@@ -67,7 +70,7 @@ class Graph {
         }
 
         fun getGraph(name: String): InputGraph {
-            println("Get graph")
+            println("Getting graph")
             if (!Files.exists(Path(path + name))) {
                 downloadGraph(name)
             }

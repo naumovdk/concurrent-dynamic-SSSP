@@ -2,13 +2,12 @@ package concurrent
 
 import Dsssp
 import INITIAL_SIZE
-import InputGraph
 import concurrent.process.Process
 import concurrent.process.Status
 import concurrent.vertex.Vertex
 import java.util.concurrent.ConcurrentHashMap
 
-class BasicConcurrentDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGraph) {
+class BasicConcurrentDsssp(source: Int = 0) : Dsssp() {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
@@ -19,9 +18,9 @@ class BasicConcurrentDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inpu
         }
     }
 
-    override fun getDistance(index: Int): Int? {
+    override fun getDistance(index: Int): Double? {
         val vertex = vertexes[index] ?: return null
-        return vertex.getDistance().value.toInt()
+        return vertex.getDistance().value
     }
 
     override fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean {
@@ -36,7 +35,7 @@ class BasicConcurrentDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inpu
             process.from = from
             process.to = to
 
-            process.help()
+            start(process)
 
             if (process.status.value == Status.SUCCESS) {
                 return true
@@ -44,8 +43,9 @@ class BasicConcurrentDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inpu
             process.status.getAndSet(Status.ABORTED)
             assert(process.status.value == Status.ABORTED)
         }
-
     }
+
+    private fun start(process: Process) = process.help()
 
     override fun addVertex(index: Int): Boolean {
         val newVertex = Vertex()
@@ -59,5 +59,9 @@ class BasicConcurrentDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inpu
 
     override fun removeVertex(index: Int): Boolean {
         TODO()
+    }
+
+    override fun extractState(): Any {
+        TODO("Not yet implemented")
     }
 }

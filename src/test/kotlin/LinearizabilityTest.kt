@@ -9,14 +9,14 @@ import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.jupiter.api.Test
+import sequential.DijkstraRecomputing
 import sequential.SequentialDsssp
 
 
 @Param(name = "vertex", gen = IntGen::class, conf = "0:${INITIAL_SIZE}")
 class LinearizabilityTest {
-    private val emptyGraph = InputGraph(INITIAL_SIZE, listOf(), 0, 0)
-    private val impl = BasicConcurrentDsssp(emptyGraph)
-    private val seq = SequentialDsssp(emptyGraph)
+    private val impl = BasicConcurrentDsssp()
+    private val seq = SequentialDsssp()
 
     @Operation
     fun setEdge(
@@ -31,9 +31,9 @@ class LinearizabilityTest {
     @Test
     fun singleThreadTest() = ModelCheckingOptions()
         .threads(1)
-        .actorsBefore(150)
+        .actorsBefore(20)
         .actorsPerThread(1)
-        .actorsAfter(0)
+        .actorsAfter(5)
         .sequentialSpecification(seq::class.java)
         .logLevel(LoggingLevel.INFO)
         .hangingDetectionThreshold(10)
@@ -135,8 +135,8 @@ class LinearizabilityTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .threads(3)
-        .actorsBefore(15)
-        .actorsPerThread(3)
+        .actorsBefore(16)
+        .actorsPerThread(2)
         .actorsAfter(15)
         .sequentialSpecification(seq::class.java)
         .logLevel(LoggingLevel.INFO)
@@ -146,9 +146,9 @@ class LinearizabilityTest {
     @Test
     fun stressTest() = StressOptions()
         .threads(3)
-        .actorsBefore(35)
+        .actorsBefore(20)
         .actorsPerThread(2)
-        .actorsAfter(10)
+        .actorsAfter(5)
         .sequentialSpecification(seq::class.java)
         .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(true)

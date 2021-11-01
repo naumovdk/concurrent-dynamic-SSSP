@@ -21,7 +21,7 @@ test {
 
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
-    maxHeapSize = "6g"
+    maxHeapSize = "13g"
 }
 
 repositories {
@@ -63,6 +63,7 @@ task benchmarkJar(type: Jar, dependsOn: jmhJar) {
                 .collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
+
 
 sourceSets {
     jmh {

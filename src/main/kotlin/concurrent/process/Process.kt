@@ -1,6 +1,7 @@
 package concurrent.process
 
 import Dsssp
+import Dsssp.Companion.supportInc
 import concurrent.process.Status.*
 import concurrent.vertex.Distance
 import concurrent.vertex.QueuedVertex
@@ -10,6 +11,7 @@ import kotlinx.atomicfu.atomic
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 class Process(private val priority: Long, private val newWeight: Double, status: Status = ACQUIRE_FROM) {
     private val descriptor0 = Descriptor0(this)
@@ -60,7 +62,7 @@ class Process(private val priority: Long, private val newWeight: Double, status:
                     } else {
                         actual
                     }
-                    if (Dsssp.supportInc && actual.parent === from && offered > actual) {
+                    if (supportInc && actual.parent === from && offered > actual) {
                         isIncremental.getAndSet(true)
                     } else {
                         casMap.putIfAbsent(to, expect to update)
@@ -72,7 +74,7 @@ class Process(private val priority: Long, private val newWeight: Double, status:
                 UPDATE_INCOMING -> to.plantEdge(to.incoming, to.incoming[from], newWeight, from, this)
 
                 SCAN -> {
-                    if (isIncremental.value && Dsssp.supportInc) {
+                    if (isIncremental.value && supportInc) {
                         workSet.compareAndSet(null, ConcurrentSkipListSet(listOf(to)))
                         affected.compareAndSet(null, ConcurrentSkipListSet())
 
@@ -93,8 +95,7 @@ class Process(private val priority: Long, private val newWeight: Double, status:
 
                             for (neighbor in cur.outgoing.keys()) {
                                 if (!affected.contains(neighbor) && neighbor !== from) {
-                                    val expect = neighbor.acquireIfChild(cur, this) ?: continue
-                                    casMap.putIfAbsent(neighbor, expect to Distance.INF)
+                                    neighbor.acquireIfChild(cur, this) ?: continue
                                     workSet.add(neighbor)
                                 }
                             }
@@ -109,7 +110,8 @@ class Process(private val priority: Long, private val newWeight: Double, status:
                                 if (!affected.contains(parent)) {
                                     val (actual, expect) = parent.acquire(this) ?: return
                                     starting.add(QueuedVertex(parent, actual))
-                                    casMap.putIfAbsent(parent, expect to actual)
+//                                    casMap.putIfAbsent(parent, expect to actual)
+                                    parent.casDistance(expect, actual)
                                 }
                             }
                         }
@@ -126,35 +128,41 @@ class Process(private val priority: Long, private val newWeight: Double, status:
                         )
                         priorityQueue.value!!
                     }
+                    val cnt = AtomicInteger(0)
                     while (Dsssp.supportDec) {
-                        val update = q.peek() ?: break
+                        cnt.incrementAndGet()
 
-                        top.compareAndSet(null, update)
-                        val readTop = top.value ?: continue
+                        val res = q.poll()
 
-                        val (cur, curDistance) = readTop
+                        if (res == null) {
+                            cnt.decrementAndGet()
+                            break
+                        }
+
+                        val (cur, curDistance) = res
 
                         for ((neighbor, edge) in cur.outgoing) {
-                            val (actual, expect) = neighbor.acquire(this) ?: return
+                            for (i in 0..1) {
+                                val (actual, expect) = neighbor.acquire2(this) ?: return
 
-                            val w = edge.read(this)
-                            val offered = Distance(curDistance.value + w, parent = cur)
-                            val newDistance =
-                                if (Dsssp.supportInc && isIncremental.value && affected.value!!.contains(neighbor) || offered < actual)
-                                    offered else actual
+                                val w = edge.read(this)
+                                val offered = Distance(curDistance.value + w, parent = cur)
+                                val isDecrements = (supportInc && isIncremental.value && affected.value!!.contains(neighbor)) || offered < actual
+                                val newDistance = if (isDecrements) offered else actual
 
-                            casMap.compute(neighbor) { _, mapped ->
-                                if (mapped == null || newDistance < mapped.second) {
-                                    q.add(QueuedVertex(neighbor, newDistance))
-                                    expect to newDistance
-                                } else {
-                                    mapped
+                                if (neighbor.casDistance(expect, newDistance)) {
+                                    if (isDecrements) {
+                                        q.add(QueuedVertex(neighbor, newDistance))
+                                    }
+                                    break
                                 }
                             }
                         }
 
-                        top.compareAndSet(readTop, null)
-                        q.remove(update)
+                        cnt.decrementAndGet()
+                    }
+                    while (cnt.get() != 0) {
+                        Thread.yield()
                     }
                 }
 

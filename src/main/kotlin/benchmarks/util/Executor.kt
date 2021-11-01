@@ -2,8 +2,6 @@ package benchmarks.util
 
 import Dsssp
 import InputGraph
-import kotlinx.atomicfu.AtomicInt
-import kotlinx.atomicfu.atomic
 import java.util.concurrent.atomic.AtomicInteger
 
 class BenchmarkThread(val threadId: Int, target: () -> Unit) : Thread(target)

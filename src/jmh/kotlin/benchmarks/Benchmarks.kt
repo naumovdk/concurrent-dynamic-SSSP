@@ -1,6 +1,7 @@
 package benchmarks
 
 import Dsssp
+import Graph
 import InputGraph
 import bapi.Panigraham
 import benchmarks.util.Executor
@@ -13,47 +14,46 @@ import org.openjdk.jmh.runner.options.OptionsBuilder
 import sequential.DijkstraRecomputing
 import sequential.SequentialDsssp
 import java.util.concurrent.TimeUnit
-import kotlin.jvm.Throws
 
 
 @State(Scope.Thread)
-@BenchmarkMode(Mode.AverageTime)
-@Measurement(iterations = 1, time = 3, timeUnit = TimeUnit.SECONDS)
+@BenchmarkMode(Mode.AverageTime, Mode.Throughput)
+@Measurement(iterations = 4, time = 3, timeUnit = TimeUnit.SECONDS)
 @Warmup(iterations = 0)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(1)
 open class SmallBenchmark {
-//    @Param("1", "2", "4", "8", "16", "32", "64", "128")
-    @Param("1")
+    @Param("1", "2", "4", "8", "16", "32", "64", "128")
     open var workers: Int = 0
 
     @Param("0.5", "0.9", "0.99")
-    open var readProbability: Double = 0.0
+    open var readWriteRatio: Double = 0.0
 
-    @Param("NY")
+    @Param("NY", "WEST", "USA")
     open var graphName: String = ""
 
-    @Param("1", "2")
+    @Param("0", "1", "2", "3")
     open var implIndex: Int = 0
 
     private val impls = listOf(
-        { g: InputGraph -> BasicConcurrentDsssp(g) },
-        { g: InputGraph -> SequentialDsssp(g) },
-        { g: InputGraph -> DijkstraRecomputing(g) })
+        { BasicConcurrentDsssp() },
+        { Panigraham() },
+        { SequentialDsssp() },
+        { DijkstraRecomputing() }
+    )
 
-    var impl: Dsssp? = null
-    var graph: InputGraph? = null
+    private val operations = 8192
+    private var graph: InputGraph? = null
+    private var impl: Dsssp? = null
 
-    private val operations = 1
+    @Benchmark
+    fun benchmark() =
+        Executor(impl!!, workers, operations, readWriteRatio, graph!!).run()
 
-    private fun benchmark() {
-        Executor(impl!!, workers, operations, readProbability, graph!!).run()
-    }
-
-    @Setup(Level.Invocation)
-    fun initialize() {
+    @Setup(Level.Trial)
+    fun f() {
         graph = Graph.getGraph(graphName)
-        impl = impls[implIndex](graph!!)
+        impl = impls[implIndex].invoke().fit(graph!!)
     }
 }
 

@@ -2,19 +2,16 @@ package sequential
 
 import Dsssp
 import INITIAL_SIZE
-import InputGraph
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 import kotlin.collections.HashMap
 
-class SequentialDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGraph) {
+class SequentialDsssp(source: Int = 0) : Dsssp() {
     class Vertex(
         var distance: Double = POSITIVE_INFINITY,
         val outgoing: HashMap<Int, Double> = hashMapOf(),
         val incoming: HashMap<Int, Double> = hashMapOf(),
-        var parent: Vertex? = null,
-        var children: MutableSet<Vertex> = mutableSetOf()
+        var parent: Vertex? = null
     )
 
     private val vertexes = HashMap<Int, Vertex>()
@@ -28,8 +25,8 @@ class SequentialDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGrap
     }
 
     @Synchronized
-    override fun getDistance(index: Int): Int? {
-        return vertexes[index]?.distance?.toInt()
+    override fun getDistance(index: Int): Double? {
+        return vertexes[index]?.distance
     }
 
     @Synchronized
@@ -46,18 +43,27 @@ class SequentialDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGrap
 
         val priorityQueue = PriorityQueue<Vertex>(compareBy { it.distance })
 
-        if (offeredDistance > to.distance && to.parent === from && Dsssp.supportInc) {
+        if (offeredDistance < oldToDistance) {
+            to.distance = offeredDistance
+            to.parent = from
+        }
+        if (offeredDistance > to.distance && to.parent === from && supportInc) {
             val workSet = mutableSetOf(to)
             val affected = mutableSetOf<Vertex>()
             while (workSet.isNotEmpty()) {
                 val cur = workSet.first().also { workSet.remove(it) }
 
-                cur.distance = Dsssp.INF
-                affected.add(cur)
-                workSet.addAll(cur.children)
-
+                cur.distance = INF
                 cur.parent = null
-                cur.children.clear()
+
+                affected.add(cur)
+
+                for ((i, _) in cur.outgoing) {
+                    val u = vertexes[i]!!
+                    if (u.parent === cur) {
+                        workSet.add(u)
+                    }
+                }
             }
             val starting = mutableSetOf<Vertex>()
             affected.forEach {
@@ -66,23 +72,16 @@ class SequentialDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGrap
 
             priorityQueue.addAll(starting)
         }
-        if (offeredDistance < oldToDistance) {
-            to.distance = offeredDistance
-            to.parent = from
-            to.children.remove(from)
-            from.children.add(to)
-
+        if (priorityQueue.isEmpty()) {
             priorityQueue.add(to)
         }
-        while (Dsssp.supportDec && priorityQueue.isNotEmpty()) {
+        while (supportDec && priorityQueue.isNotEmpty()) {
             val cur = priorityQueue.poll()
             cur.outgoing.forEach { (i, w) ->
                 val neighbor = vertexes[i]!!
                 if (cur.distance + w < neighbor.distance) {
                     neighbor.distance = cur.distance + w
                     neighbor.parent = cur
-                    neighbor.children.remove(cur)
-                    cur.children.add(neighbor)
 
                     priorityQueue.add(neighbor)
                 }
@@ -107,7 +106,7 @@ class SequentialDsssp(inputGraph: InputGraph, source: Int = 0) : Dsssp(inputGrap
         TODO()
     }
 
-//    override fun extractState(): Any {
-//        return vertexes.map { (i, v) -> i to v.distance to v.outgoing }
-//    }
+    override fun extractState(): Any {
+        return vertexes.map { (i, v) -> i to v.distance to v.outgoing }
+    }
 }

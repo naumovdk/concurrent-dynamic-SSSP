@@ -20,7 +20,7 @@ class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
         }
     }
 
-    private fun readWorking(descriptor: Descriptor): Distance {
+    fun readWorking(descriptor: Descriptor): Distance {
         return when (descriptor) {
             is Descriptor0 -> distance0.value
             is Descriptor1 -> distance1.value
@@ -52,6 +52,63 @@ class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
                     return null
                 }
                 return curActual to readWorking(curDescriptor)
+            }
+
+            if (curStatus.isInProgress()) {
+                initiator.onIntersection(curDescriptor.process)
+                continue
+            }
+
+            val newDescriptor = initiator.new(curDescriptor, curStatus)
+            descriptor.compareAndSet(curDescriptor, newDescriptor)
+        }
+    }
+
+    fun acquire2(initiator: Process): Pair<Distance, Distance>? {
+        while (true) {
+            val curDescriptor = descriptor.value
+            val curStatus = curDescriptor.process.status.value
+            val curActual = readActual(curDescriptor, curStatus)
+
+            if (curDescriptor.process === initiator) {
+                if (curStatus.isNotInProgress()) {
+                    return null
+                }
+                return readWorking(curDescriptor) to readWorking(curDescriptor)
+            }
+
+            if (curStatus.isInProgress()) {
+                initiator.onIntersection(curDescriptor.process)
+                continue
+            }
+
+            val newDescriptor = initiator.new(curDescriptor, curStatus)
+            if (descriptor.compareAndSet(curDescriptor, newDescriptor)) {
+                return curActual to readWorking(newDescriptor)
+            }
+        }
+    }
+
+    fun acquireAndCas(initiator: Process, update: Distance): Boolean? {
+        while (true) {
+            val curDescriptor = descriptor.value
+            val curStatus = curDescriptor.process.status.value
+            val curActual = readActual(curDescriptor, curStatus)
+
+            if (curDescriptor.process === initiator) {
+                if (curStatus.isNotInProgress()) {
+                    return null
+                }
+                val expect = readWorking(curDescriptor)
+                if (update > curActual) {
+                    if (casDistance(expect, curActual)) {
+                        return false
+                    }
+                } else {
+                    if (casDistance(expect, update)) {
+                        return true
+                    }
+                }
             }
 
             if (curStatus.isInProgress()) {

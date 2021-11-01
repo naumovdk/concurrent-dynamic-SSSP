@@ -2,12 +2,11 @@ package sequential
 
 import Dsssp
 import INITIAL_SIZE
-import InputGraph
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 
 
-class DijkstraRecomputing(inputGraph: InputGraph, private val source: Int = 0) : Dsssp(inputGraph) {
+class DijkstraRecomputing(private val source: Int = 0) : Dsssp() {
     private val graph: MutableMap<Int, MutableMap<Int, Double>> = mutableMapOf()
     private val distances = mutableMapOf<Int, Double>()
     private var changed = true
@@ -21,12 +20,12 @@ class DijkstraRecomputing(inputGraph: InputGraph, private val source: Int = 0) :
     }
 
     @Synchronized
-    override fun getDistance(index: Int): Int? {
+    override fun getDistance(index: Int): Double? {
         if (changed) {
             recompute()
         }
         changed = false
-        return distances[index]?.toInt()
+        return distances[index]
     }
 
     @Synchronized
@@ -88,5 +87,9 @@ class DijkstraRecomputing(inputGraph: InputGraph, private val source: Int = 0) :
         }
         graph.remove(index)
         return true
+    }
+
+    override fun extractState(): Any {
+        return graph to changed to distances
     }
 }
