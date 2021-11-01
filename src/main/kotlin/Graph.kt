@@ -15,7 +15,7 @@ data class InputGraph(val nodes: Int, val edges: List<InputEdge>, val minWeight:
 class Graph {
     companion object {
 //        private const val path = "C:/Users/dimna/IdeaProjects/concurrent-dynamic-SSSP/graphs/"
-        private const val path = "./graphs/"
+        private const val path = "/home/dmitry.naumov/concurrent-dynamic-SSSP/graphs/"
 
         val emptyGraph = InputGraph(INITIAL_SIZE, listOf(), 0, 0)
 
