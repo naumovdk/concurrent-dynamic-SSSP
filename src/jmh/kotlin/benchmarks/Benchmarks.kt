@@ -5,6 +5,7 @@ import Graph
 import InputGraph
 import bapi.Panigraham
 import benchmarks.util.Executor
+import benchmarks.util.ScenarioGenerator
 import concurrent.BasicConcurrentDsssp
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.results.format.ResultFormatType
@@ -22,17 +23,17 @@ import java.util.concurrent.TimeUnit
 @Warmup(iterations = 2, time = 1, timeUnit = TimeUnit.MILLISECONDS)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(1)
-open class SmallBenchmark {
+open class Benchmarks {
     @Param("1", "2", "4", "8", "16", "32", "64", "128")
     open var workers: Int = 0
 
-    @Param("0.99")
+    @Param("0.5", "0.8", "0.99")
     open var readWriteRatio: Double = 0.0
 
     @Param("NY")
     open var graphName: String = ""
 
-    @Param("0")
+    @Param("0", "1", "2", "3")
     open var implIndex: Int = 0
 
     private val impls = listOf(
@@ -43,29 +44,35 @@ open class SmallBenchmark {
     )
 
     private val operations = 1000000
-    private var graph: InputGraph? = null
-    private var impl: Dsssp? = null
+    private var graph: InputGraph = Graph.emptyGraph
+    private var impl: Dsssp = BasicConcurrentDsssp()
+    private var executor: Executor = Executor(impl, arrayOf())
 
     @Benchmark
-    fun benchmark() = Executor(impl!!, workers, operations, readWriteRatio, graph!!).run()
+    fun benchmark() = executor.run()
 
     @Setup(Level.Trial)
-    fun setup() {
+    fun setupGraph() {
         graph = Graph.getGraph(graphName)
     }
 
-    @Setup(Level.Invocation)
-    fun setup_() {
-        impl = impls[implIndex].invoke().fit(graph!!)
+    @Setup(Level.Iteration)
+    fun setupThreads() {
+        val operationsPerThread = operations / workers
+        val scenarios = (0 until workers).map { seed ->
+            ScenarioGenerator.generate(
+                operationsPerThread,
+                readWriteRatio,
+                graph.nodes,
+                graph.maxWeight,
+                seed
+            )
+        }.toTypedArray()
+        executor = Executor(impl, scenarios)
     }
-}
 
-@Throws(RunnerException::class)
-fun main() {
-    Runner(
-        OptionsBuilder().include(SmallBenchmark::class.java.simpleName)
-            .resultFormat(ResultFormatType.CSV)
-            .result("results.csv")
-            .build()
-    ).run()
+    @Setup(Level.Invocation)
+    fun fit() {
+        impl = impls[implIndex].invoke().fit(graph)
+    }
 }

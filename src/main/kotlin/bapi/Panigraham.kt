@@ -19,11 +19,10 @@ class Panigraham(private val source: Int = 0) : Dsssp() {
         val newVertex = Vertex(index)
         val mapped = vertexes.getOrPut(index) { newVertex }
         return mapped === newVertex
-
     }
 
     override fun getDistance(index: Int): Double {
-        return (sssp()[index] ?: INF)
+        return sssp()[index] ?: INF
     }
 
     private fun sssp(): Map<Int, Double> {
@@ -47,7 +46,7 @@ class Panigraham(private val source: Int = 0) : Dsssp() {
         while (priorityQueue.isNotEmpty()) {
             val (curDist, cur) = priorityQueue.poll() ?: continue
             for ((u, w) in cur.outgoing) {
-                val uDist = distances[u.index] ?: Dsssp.INF
+                val uDist = distances[u.index] ?: INF
                 val offeredDist = curDist + w
                 if (offeredDist < uDist) {
                     distances[u.index] = offeredDist

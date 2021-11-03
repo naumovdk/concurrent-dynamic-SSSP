@@ -1,28 +1,26 @@
 package benchmarks.util
 
 import Dsssp
-import InputGraph
-import java.util.concurrent.atomic.AtomicInteger
-
-class BenchmarkThread(val threadId: Int, target: () -> Unit) : Thread(target)
 
 class Executor(
     private val impl: Dsssp,
-    private val threads: Int,
-    private val operations: Int,
-    private val readWriteRatio: Double,
-    private val graph: InputGraph
+    scenarios: Array<List<Int>>
 ) {
-    fun run() {
-        val cnt = AtomicInteger(0)
-        val scenario = ScenarioGenerator.generate(operations, readWriteRatio, graph.nodes, graph.maxWeight)
-        val ts = Array(threads) { threadId ->
-            BenchmarkThread(threadId) {
-                var i = cnt.incrementAndGet()
-                while (i < operations) {
-                    val u = scenario[3 * i]
-                    val v = scenario[3 * i + 1]
-                    val w = scenario[3 * i + 2]
+    @Volatile
+    private var start = false
+
+    private val threads: Array<Thread>
+
+    init {
+        @Suppress("ControlFlowWithEmptyBody")
+        threads = scenarios.map {
+            Thread {
+                while (!start); // wait
+                var i = 0
+                while (3 * i + 2 < it.size) {
+                    val u = it[3 * i]
+                    val v = it[3 * i + 1]
+                    val w = it[3 * i + 2]
 
                     val isRead = v == 0 && w == 0
                     if (isRead) {
@@ -30,11 +28,15 @@ class Executor(
                     } else {
                         impl.setEdge(u, v, w.toDouble())
                     }
-                    i = cnt.incrementAndGet()
+                    i++
                 }
             }
-        }
-        ts.forEach { it.start() }
-        ts.forEach { it.join() }
+        }.toTypedArray()
+        threads.forEach { it.start() }
+    }
+
+    fun run() {
+        start = true
+        threads.forEach { it.join() }
     }
 }

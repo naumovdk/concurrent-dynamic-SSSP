@@ -14,7 +14,7 @@ data class InputGraph(val nodes: Int, val edges: List<InputEdge>, val minWeight:
 
 class Graph {
     companion object {
-        private const val path = "/home/dmitry.naumov/concurrent-dynamic-SSSP/graphs/"
+        private const val path = "./graphs/"
 
         val emptyGraph = InputGraph(INITIAL_SIZE, listOf(), 0, 0)
 
@@ -71,6 +71,7 @@ class Graph {
         fun getGraph(name: String): InputGraph {
             println("Getting graph")
             if (!Files.exists(Path(path + name))) {
+                println("Couldn't find" + Path(path).toAbsolutePath() + "name")
                 downloadGraph(name)
             }
             return parseGrFile(path + name, true).also { println("Got graph") }

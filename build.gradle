@@ -64,6 +64,10 @@ task benchmarkJar(type: Jar, dependsOn: jmhJar) {
     }
 }
 
+task hello {
+    println projectDir
+    println buildDir
+}
 
 sourceSets {
     jmh {
