@@ -6,8 +6,9 @@ import concurrent.process.Process
 import concurrent.process.Status
 import concurrent.vertex.Vertex
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KFunction2
 
-class BasicConcurrentDsssp(source: Int = 0) : Dsssp() {
+class BasicConcurrentDsssp(source: Int = 0, val onIntersection: KFunction2<Process, Process, Unit> = Process::onIntersectionHelp) : Dsssp() {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
@@ -31,7 +32,7 @@ class BasicConcurrentDsssp(source: Int = 0) : Dsssp() {
         val threadId = Thread.currentThread().id
 
         while (true) {
-            val process = Process(threadId, newWeight)
+            val process = Process(threadId, newWeight, onIntersectionPolicy = onIntersection)
             process.from = from
             process.to = to
 

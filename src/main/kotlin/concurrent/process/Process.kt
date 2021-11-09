@@ -11,15 +11,20 @@ import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.PriorityBlockingQueue
+import kotlin.reflect.KFunction2
 
-class Process(private val priority: Long, private val newWeight: Double, status: Status = INIT) {
+class Process(
+    private val priority: Long,
+    private val newWeight: Double,
+    status: Status = INIT,
+    private val onIntersectionPolicy: KFunction2<Process, Process, Unit> = Process::onIntersectionHelp
+) {
     private val descriptor0 = Descriptor0(this)
     private val descriptor1 = Descriptor1(this)
     val status = atomic(status)
 
     lateinit var to: Vertex
     lateinit var from: Vertex
-    lateinit var source: Vertex
 
     private val priorityQueue = atomic<PriorityBlockingQueue<QueuedVertex>?>(null)
     private val top = atomic<QueuedVertex?>(null)
@@ -31,13 +36,33 @@ class Process(private val priority: Long, private val newWeight: Double, status:
     private val affected: AtomicRef<ConcurrentSkipListSet<Vertex>?> = atomic(null)
     private val topWorkSet: AtomicRef<Vertex?> = atomic(null)
 
-    fun onIntersection(other: Process) {
+    fun onIntersection(other: Process) = onIntersectionPolicy(this, other)
+
+    fun onIntersectionHelp(other: Process) {
         if (Dsssp.supportHelp && this.priority < other.priority) {
             other.help()
         } else {
             val curStatus = other.status.value
             if (curStatus.isInProgress()) {
                 other.status.compareAndSet(curStatus, ABORTED)
+            }
+        }
+    }
+
+    fun onIntersectionAbort(other: Process) {
+        val curStatus = other.status.value
+        if (curStatus.isInProgress()) {
+            other.status.compareAndSet(curStatus, ABORTED)
+        }
+    }
+
+    fun onIntersectionWait(other: Process) {
+        while (true) {
+            val curStatus = other.status.value
+            if (curStatus.isInProgress()) {
+                Thread.yield()
+            } else {
+                break
             }
         }
     }

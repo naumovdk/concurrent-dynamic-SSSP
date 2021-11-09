@@ -15,12 +15,13 @@ import org.openjdk.jmh.runner.options.OptionsBuilder
 import sequential.DijkstraRecomputing
 import sequential.SequentialDsssp
 import java.util.concurrent.TimeUnit
+import concurrent.process.Process
 
 
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
-@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.MILLISECONDS)
-@Warmup(iterations = 2, time = 1, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.MILLISECONDS)
+@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.MILLISECONDS)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(1)
 open class Benchmarks {
@@ -28,26 +29,26 @@ open class Benchmarks {
 //    @Param("1", "2", "4", "8")
     open var workers: Int = 0
 
-    @Param("1")
+    @Param("0.5", "0.8", "0.99")
     open var readWriteRatio: Double = 0.0
 
-    @Param("NY")
+    @Param("USA", "WEST", "NY")
     open var graphName: String = ""
 
-    @Param("0")
+    @Param("0", "1", "2", "3")
     open var implIndex: Int = 0
 
     private val impls = listOf(
-        { BasicConcurrentDsssp() },
-        { DijkstraRecomputing() },
-        { Panigraham() },
+        { BasicConcurrentDsssp(onIntersection = Process::onIntersectionHelp) },
+        { BasicConcurrentDsssp(onIntersection = Process::onIntersectionAbort) },
+        { BasicConcurrentDsssp(onIntersection = Process::onIntersectionWait) },
         { SequentialDsssp() }
     )
     private val operations = listOf(
-        1_000_000,
-        10_000,
-        10_000,
-        1000_000
+        100_000,
+        100_000,
+        100_000,
+        100_000,
     )
 
     private var graph: InputGraph = Graph.emptyGraph
