@@ -1,13 +1,9 @@
 package concurrent.process
 
 enum class Status {
-    ACQUIRE_FROM,
-    ACQUIRE_TO,
-    UPDATE_OUTGOING,
-    UPDATE_INCOMING,
+    INIT,
     SCAN,
     RELAXATION,
-    UPDATE_DISTANCES,
 
     ABORTED,
     SUCCESS;
@@ -18,16 +14,12 @@ enum class Status {
         else -> true
     }
 
-    fun isNotInProgress() = !isInProgress()
+    fun isTerminated() = !isInProgress()
 
     fun next() = when (this) {
-        ACQUIRE_FROM -> ACQUIRE_TO
-        ACQUIRE_TO -> UPDATE_OUTGOING
-        UPDATE_OUTGOING -> UPDATE_INCOMING
-        UPDATE_INCOMING -> SCAN
+        INIT -> SCAN
         SCAN -> RELAXATION
-        RELAXATION -> UPDATE_DISTANCES
-        UPDATE_DISTANCES -> SUCCESS
+        RELAXATION -> SUCCESS
 
         ABORTED -> ABORTED
         SUCCESS -> SUCCESS

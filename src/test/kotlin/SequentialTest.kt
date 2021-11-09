@@ -277,4 +277,90 @@ class SequentialTest {
         d.setEdge(15, 11, 35.0)
     }
 
+    @Test
+    fun cycle() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(0, 1, 1.0)
+        d.setEdge(1, 0, 1.0)
+        d.setEdge(1, 2, 1.0)
+        d.setEdge(2, 1, 1.0)
+    }
+
+    @Test
+    fun hangs() {
+        val d = BasicConcurrentDsssp()
+//        d.setEdge(10, 5, 35.0)
+        d.setEdge(6, 3, 5.0)
+        d.setEdge(0, 6, 11.0)
+        d.setEdge(1, 6, 23.0)
+    }
+
+    @Test
+    fun g() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(0, 2, 1.0)
+    }
+
+    @Test
+    fun a() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(1, 2, 5.0)
+        d.setEdge(0, 1, 31.0)
+        assert(d.getDistance(2) == 31.0 + 5.0)
+    }
+
+    @Test
+    fun b() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(2, 1, 3.0)
+        d.setEdge(4, 2, 33.0)
+        d.setEdge(0, 4, 1.0)
+        assert(d.getDistance(1) == 33.0 + 3.0 + 1.0)
+    }
+
+    @Test
+    fun c() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(1,3,35.0)
+        d.setEdge(2,1,13.0)
+        d.setEdge(0,2,13.0)
+        d.setEdge(2,1,19.0)
+        assert(d.getDistance(1) == 13.0 + 19.0)
+        assert(d.getDistance(3) == 13.0 + 19.0 + 35.0)
+    }
+
+    @Test
+    fun d() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(10,6,3.0)
+        d.setEdge(9,10,19.0)
+        d.setEdge(6,8,37.0)
+        d.setEdge(9,5,5.0)
+        d.setEdge(0,7,39.0)
+        d.setEdge(5,6,39.0)
+        d.setEdge(7,9,11.0)
+        assert(d.getDistance(8) == 39.0 + 11.0 + 19.0 + 3.0 + 37.0)
+    }
+
+    @Test
+    fun e() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(0,9,33.0)
+        d.setEdge(9,4,35.0)
+        d.setEdge(4,3,15.0)
+        d.setEdge(9,7,17.0)
+        d.setEdge(3,0,37.0)
+        d.setEdge(4,3,37.0)
+        assert(d.getDistance(7) == 33.0 + 17.0)
+    }
+
+    @Test
+    fun f() {
+        val d = BasicConcurrentDsssp()
+        d.setEdge(0,1,5.0)
+        d.setEdge(1,2,9.0)
+        d.setEdge(2,4,25.0)
+        d.setEdge(0, 1, 27.0)
+        assert(d.getDistance(4) == 27.0 + 9.0 + 25.0)
+    }
 }

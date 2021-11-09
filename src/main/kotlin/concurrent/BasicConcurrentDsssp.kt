@@ -20,7 +20,7 @@ class BasicConcurrentDsssp(source: Int = 0) : Dsssp() {
 
     override fun getDistance(index: Int): Double? {
         val vertex = vertexes[index] ?: return null
-        return vertex.getDistance().value
+        return vertex.getDistance().distance
     }
 
     override fun setEdge(fromIndex: Int, toIndex: Int, newWeight: Double): Boolean {
@@ -35,7 +35,7 @@ class BasicConcurrentDsssp(source: Int = 0) : Dsssp() {
             process.from = from
             process.to = to
 
-            process.start()
+            process.help()
 
             if (process.status.value == Status.SUCCESS) {
                 return true

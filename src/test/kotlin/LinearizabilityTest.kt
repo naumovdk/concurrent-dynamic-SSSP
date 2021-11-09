@@ -9,7 +9,6 @@ import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.jupiter.api.Test
-import sequential.DijkstraRecomputing
 import sequential.SequentialDsssp
 
 
@@ -29,14 +28,13 @@ class LinearizabilityTest {
     fun getDistance(@Param(name = "vertex") v: Int) = impl.getDistance(v)
 
     @Test
-    fun singleThreadTest() = ModelCheckingOptions()
+    fun singleThreadTest() = StressOptions()
         .threads(1)
-        .actorsBefore(20)
+        .actorsBefore(40)
         .actorsPerThread(1)
-        .actorsAfter(5)
+        .actorsAfter(0)
         .sequentialSpecification(seq::class.java)
         .logLevel(LoggingLevel.INFO)
-        .hangingDetectionThreshold(10)
         .minimizeFailedScenario(true)
         .check(LinearizabilityTest::class.java)
 
@@ -89,15 +87,15 @@ class LinearizabilityTest {
         }
         .addCustomScenario {
             initial {
-                actor(Dsssp::setEdge, 1,3,35.0)
-                actor(Dsssp::setEdge, 2,1,13.0)
+                actor(Dsssp::setEdge, 1, 3, 35.0)
+                actor(Dsssp::setEdge, 2, 1, 13.0)
             }
             parallel {
                 thread {
-                    actor(Dsssp::setEdge, 0,2,13.0)
+                    actor(Dsssp::setEdge, 0, 2, 13.0)
                 }
                 thread {
-                    actor(Dsssp::setEdge, 2,1,19.0)
+                    actor(Dsssp::setEdge, 2, 1, 19.0)
                 }
             }
             post {
@@ -108,18 +106,36 @@ class LinearizabilityTest {
         .addCustomScenario {
             parallel {
                 thread {
-                    actor(Dsssp::setEdge, 0,3,23.0)
+                    actor(Dsssp::setEdge, 0, 3, 23.0)
                 }
                 thread {
-                    actor(Dsssp::setEdge, 3,1,11.0)
+                    actor(Dsssp::setEdge, 3, 1, 11.0)
                 }
                 thread {
-                    actor(Dsssp::setEdge, 1,6,9.0)
+                    actor(Dsssp::setEdge, 1, 6, 9.0)
                     actor(Dsssp::getDistance, 3)
                 }
             }
             post {
                 actor(Dsssp::getDistance, 6)
+            }
+        }
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 2, 1, 23.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 1, 9.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 0, 2, 35.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 0)
+                actor(Dsssp::getDistance, 1)
+                actor(Dsssp::getDistance, 2)
             }
         }
         .threads(2)
@@ -134,10 +150,111 @@ class LinearizabilityTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 0, 1, 33.0)
+                actor(Dsssp::setEdge, 9, 10, 17.0)
+                actor(Dsssp::setEdge, 2, 8, 13.0)
+                actor(Dsssp::setEdge, 10, 7, 15.0)
+                actor(Dsssp::setEdge, 1, 2, 7.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 2, 9, 25.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 8, 9, 29.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 7)
+            }
+        }
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 1, 2, 5.0)
+                actor(Dsssp::setEdge, 2, 4, 3.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 1, 3, 37.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 0, 1, 33.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 4)
+                actor(Dsssp::getDistance, 3)
+                actor(Dsssp::getDistance, 2)
+                actor(Dsssp::getDistance, 1)
+                actor(Dsssp::getDistance, 0)
+            }
+        }
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 2, 4, 17.0)
+                actor(Dsssp::setEdge, 3, 2, 7.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 1, 0, 27.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 0, 3, 27.0)
+                }
+            }
+        }
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 1, 2, 1.0)
+                actor(Dsssp::setEdge, 0, 2, 29.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 2, 19.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 2, 1, 5.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 0)
+                actor(Dsssp::getDistance, 1)
+                actor(Dsssp::getDistance, 2)
+            }
+        }
+        .addCustomScenario {
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 2, 17.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 1, 2, 11.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 2)
+            }
+        }
+        .addCustomScenario {
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 2, 19.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 2, 1, 5.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 2)
+            }
+        }
         .threads(3)
-        .actorsBefore(16)
-        .actorsPerThread(2)
+        .actorsBefore(25)
+        .actorsPerThread(3)
         .actorsAfter(15)
+        .verboseTrace(true)
         .sequentialSpecification(seq::class.java)
         .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(true)
@@ -145,12 +262,118 @@ class LinearizabilityTest {
 
     @Test
     fun stressTest() = StressOptions()
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 1, 2, 1.0)
+                actor(Dsssp::setEdge, 0, 2, 29.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 2, 19.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 2, 1, 5.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 0)
+                actor(Dsssp::getDistance, 1)
+                actor(Dsssp::getDistance, 2)
+            }
+        }
+        .addCustomScenario {
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 2, 17.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 1, 2, 11.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 2)
+            }
+        }
+        .addCustomScenario {
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 2, 19.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 2, 1, 5.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 2)
+            }
+        }
         .threads(3)
-        .actorsBefore(20)
+        .actorsBefore(40)
         .actorsPerThread(2)
-        .actorsAfter(5)
+        .actorsAfter(15)
         .sequentialSpecification(seq::class.java)
         .logLevel(LoggingLevel.INFO)
+        .iterations(1000)
         .minimizeFailedScenario(true)
+        .check(LinearizabilityTest::class.java)
+
+    @Test
+    fun cornerCases() = ModelCheckingOptions()
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 0, 3, 5.0)
+                actor(Dsssp::setEdge, 2, 4, 23.0)
+                actor(Dsssp::setEdge, 3, 4, 1.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 3, 0, 35.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 3, 4, 19.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 4)
+            }
+        }
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 0, 5, 1.0)
+                actor(Dsssp::setEdge, 5, 7, 17.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 0, 1, 27.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 0, 5, 25.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 7)
+            }
+        }
+        .addCustomScenario {
+            initial {
+                actor(Dsssp::setEdge, 3, 5, 31.0)
+                actor(Dsssp::setEdge, 7, 5, 23.0)
+                actor(Dsssp::setEdge, 0, 3, 11.0)
+            }
+            parallel {
+                thread {
+                    actor(Dsssp::setEdge, 6, 7, 17.0)
+                }
+                thread {
+                    actor(Dsssp::setEdge, 0, 3, 21.0)
+                }
+            }
+            post {
+                actor(Dsssp::getDistance, 5)
+            }
+        }
+        .sequentialSpecification(seq::class.java)
+        .verboseTrace(true)
+        .iterations(0)
         .check(LinearizabilityTest::class.java)
 }

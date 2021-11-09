@@ -9,9 +9,14 @@ import java.util.concurrent.ConcurrentHashMap
 class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
     val incoming = ConcurrentHashMap<Vertex, Edge>()
     val outgoing = ConcurrentHashMap<Vertex, Edge>()
+
     private val descriptor: AtomicRef<Descriptor> = atomic(Descriptor0(Process.UNINITIALIZED))
     private val distance0 = atomic(Distance(distance, null))
     private val distance1 = atomic(Distance.INF)
+
+    data class Improvement(val distance: Distance, val process: Process)
+    private val improvement: AtomicRef<Improvement> = atomic(Improvement(Distance.INF, Process.UNINITIALIZED))
+    private val decremented = atomic(true to Process.UNINITIALIZED)
 
     private fun readActual(descriptor: Descriptor, status: Status): Distance {
         return when (descriptor) {
@@ -38,97 +43,70 @@ class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
         }
     }
 
-    /**
-     * @return pair of actual and expect distances or null if initiator has been aborted
-     */
-    fun acquire(initiator: Process): Pair<Distance, Distance>? {
-        while (true) {
-            val curDescriptor = descriptor.value
-            val curStatus = curDescriptor.process.status.value
-            val curActual = readActual(curDescriptor, curStatus)
-
-            if (curDescriptor.process === initiator) {
-                if (curStatus.isNotInProgress()) {
-                    return null
-                }
-                return curActual to readWorking(curDescriptor)
-            }
-
-            if (curStatus.isInProgress()) {
-                initiator.onIntersection(curDescriptor.process)
-                continue
-            }
-
-            val newDescriptor = initiator.new(curDescriptor, curStatus)
-            descriptor.compareAndSet(curDescriptor, newDescriptor)
-        }
-    }
-
-    fun acquireAndCas(initiator: Process): Pair<Distance, Distance>? {
-        while (true) {
-            val curDescriptor = descriptor.value
-            val curStatus = curDescriptor.process.status.value
-            val curActual = readActual(curDescriptor, curStatus)
-
-            if (curDescriptor.process === initiator) {
-                if (curStatus.isNotInProgress()) {
-                    return null
-                }
-                return readWorking(curDescriptor) to readWorking(curDescriptor)
-            }
-
-            if (curStatus.isInProgress()) {
-                initiator.onIntersection(curDescriptor.process)
-                continue
-            }
-
-            val newDescriptor = initiator.new(curDescriptor, curStatus)
-            if (descriptor.compareAndSet(curDescriptor, newDescriptor)) {
-                return curActual to readWorking(newDescriptor)
-            }
-        }
-    }
-
-    fun acquireAndCas(initiator: Process, update: Distance): Boolean? {
-        while (true) {
-            val curDescriptor = descriptor.value
-            val curStatus = curDescriptor.process.status.value
-            val curActual = readActual(curDescriptor, curStatus)
-
-            if (curDescriptor.process === initiator) {
-                if (curStatus.isNotInProgress()) {
-                    return null
-                }
-                val expect = readWorking(curDescriptor)
-                if (update > curActual) {
-                    if (casDistance(expect, curActual)) {
-                        return false
-                    }
-                } else {
-                    if (casDistance(expect, update)) {
-                        return true
-                    }
-                }
-            }
-
-            if (curStatus.isInProgress()) {
-                initiator.onIntersection(curDescriptor.process)
-                continue
-            }
-
-            val newDescriptor = initiator.new(curDescriptor, curStatus)
-            descriptor.compareAndSet(curDescriptor, newDescriptor)
-        }
-    }
-
-    fun casDistance(expect: Distance, update: Distance): Boolean {
+    private fun casDistance(expect: Distance, update: Distance): Boolean {
         return when (descriptor.value) {
             is Descriptor0 -> distance0.compareAndSet(expect, update)
             is Descriptor1 -> distance1.compareAndSet(expect, update)
         }
     }
 
-    fun plantEdge(
+    fun acquire(initiator: Process): Distance? {
+        while (true) {
+            val curDescriptor = descriptor.value
+            val curStatus = curDescriptor.process.status.value
+            val curActual = readActual(curDescriptor, curStatus)
+
+            if (initiator.status.value.isTerminated()) {
+                return null
+            }
+
+            if (curDescriptor.process === initiator) {
+                return curActual
+            }
+
+            if (curStatus.isInProgress()) {
+                initiator.onIntersection(curDescriptor.process)
+                continue
+            }
+
+            val newDescriptor = initiator.new(curDescriptor, curStatus)
+            descriptor.compareAndSet(curDescriptor, newDescriptor)
+        }
+    }
+
+    fun tryDecrement(newDistance: Distance, initiator: Process): Pair<Boolean, Distance>? {
+        while (true) {
+            val curDescriptor = descriptor.value
+            val curStatus = curDescriptor.process.status.value
+            val curActual = readActual(curDescriptor, curStatus)
+            val curWorking = readWorking(curDescriptor)
+            val curImprovement = improvement.value
+            val curDecremented = decremented.value
+
+            if (initiator.status.value.isTerminated()) {
+                return null
+            }
+
+            if (curImprovement.process !== initiator) {
+                improvement.compareAndSet(curImprovement, Improvement(curActual, initiator))
+                continue
+            }
+
+            if (newDistance < curImprovement.distance) {
+                decremented.compareAndSet(curDecremented, true to initiator)
+                improvement.compareAndSet(curImprovement, Improvement(newDistance, initiator))
+                continue
+            }
+
+            val copy = curImprovement.distance.copy()
+            casDistance(curWorking, copy)
+            if (readWorking(curDescriptor) == copy) {
+                return (curDecremented.first && curDecremented.second === initiator) to copy
+            }
+        }
+    }
+
+    fun setEdge(
         edges: ConcurrentHashMap<Vertex, Edge>,
         expect: Edge?,
         newWeight: Double,
@@ -144,23 +122,26 @@ class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
         return edges.replace(to, expect, update)
     }
 
-    /**
-     * @return expect distance or null if initiator has been aborted or parents are not equal
-     */
     fun acquireIfChild(
         parent: Vertex,
         initiator: Process
-    ): Distance? {
+    ): Boolean? {
         while (true) {
             val curDescriptor = descriptor.value
             val curStatus = curDescriptor.process.status.value
             val curActual = readActual(curDescriptor, curStatus)
+            val curImprovement = improvement.value
+
+            if (initiator.status.value.isTerminated()) {
+                return null
+            }
 
             if (curDescriptor.process === initiator) {
-                if (curStatus.isNotInProgress()) {
-                    return null
+                if (curActual.parent === parent) {
+                    improvement.compareAndSet(curImprovement, Improvement(Distance.INF, initiator))
+                    return true
                 }
-                return readWorking(curDescriptor)
+                return false
             }
 
             if (curStatus.isInProgress()) {
@@ -169,15 +150,18 @@ class Vertex(distance: Double = Dsssp.INF) : Comparable<Vertex> {
             }
 
             val newDescriptor = initiator.new(curDescriptor, curStatus)
-            if (curActual.parent === parent) {
-                descriptor.compareAndSet(curDescriptor, newDescriptor)
-            } else {
-                return null
-            }
+            descriptor.compareAndSet(curDescriptor, newDescriptor)
         }
     }
 
     override fun compareTo(other: Vertex): Int {
         return compareValuesBy(this, other) { it.hashCode() }
+    }
+
+    fun mark(process: Process) {
+        val dec = decremented.value
+        if (descriptor.value.process === process) {
+            decremented.compareAndSet(dec, false to process)
+        }
     }
 }

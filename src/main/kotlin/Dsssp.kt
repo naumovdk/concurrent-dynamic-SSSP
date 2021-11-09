@@ -1,6 +1,6 @@
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
-const val INITIAL_SIZE = 10
+const val INITIAL_SIZE = 4
 
 abstract class Dsssp : VerifierState() {
 
@@ -28,8 +28,8 @@ abstract class Dsssp : VerifierState() {
         val INF: Double
             get() = Double.POSITIVE_INFINITY
 
-        const val supportDec = true
-        const val supportInc = false
+        const val supportDecremental = true
+        const val supportIncremental = true
         const val supportHelp = true
     }
 }

@@ -25,25 +25,31 @@ import java.util.concurrent.TimeUnit
 @Fork(1)
 open class Benchmarks {
     @Param("1", "2", "4", "8", "16", "32", "64", "128")
+//    @Param("1", "2", "4", "8")
     open var workers: Int = 0
 
-    @Param("0.5", "0.8", "0.99")
+    @Param("1")
     open var readWriteRatio: Double = 0.0
 
     @Param("NY")
     open var graphName: String = ""
 
-    @Param("0", "1", "2", "3")
+    @Param("0")
     open var implIndex: Int = 0
 
     private val impls = listOf(
         { BasicConcurrentDsssp() },
+        { DijkstraRecomputing() },
         { Panigraham() },
-        { SequentialDsssp() },
-        { DijkstraRecomputing() }
+        { SequentialDsssp() }
+    )
+    private val operations = listOf(
+        1_000_000,
+        10_000,
+        10_000,
+        1000_000
     )
 
-    private val operations = 1000000
     private var graph: InputGraph = Graph.emptyGraph
     private var impl: Dsssp = BasicConcurrentDsssp()
     private var executor: Executor = Executor(impl, arrayOf())
@@ -56,9 +62,9 @@ open class Benchmarks {
         graph = Graph.getGraph(graphName)
     }
 
-    @Setup(Level.Iteration)
+    @Setup(Level.Invocation)
     fun setupThreads() {
-        val operationsPerThread = operations / workers
+        val operationsPerThread = operations[implIndex] / workers
         val scenarios = (0 until workers).map { seed ->
             ScenarioGenerator.generate(
                 operationsPerThread,

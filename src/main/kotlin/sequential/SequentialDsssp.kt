@@ -47,7 +47,7 @@ class SequentialDsssp(source: Int = 0) : Dsssp() {
             to.distance = offeredDistance
             to.parent = from
         }
-        if (offeredDistance > to.distance && to.parent === from && supportInc) {
+        if (offeredDistance > to.distance && to.parent === from && supportIncremental) {
             val workSet = mutableSetOf(to)
             val affected = mutableSetOf<Vertex>()
             while (workSet.isNotEmpty()) {
@@ -75,7 +75,7 @@ class SequentialDsssp(source: Int = 0) : Dsssp() {
         if (priorityQueue.isEmpty()) {
             priorityQueue.add(to)
         }
-        while (supportDec && priorityQueue.isNotEmpty()) {
+        while (supportDecremental && priorityQueue.isNotEmpty()) {
             val cur = priorityQueue.poll()
             cur.outgoing.forEach { (i, w) ->
                 val neighbor = vertexes[i]!!
