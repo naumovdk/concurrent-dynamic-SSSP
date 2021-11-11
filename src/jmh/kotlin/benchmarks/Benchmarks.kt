@@ -3,19 +3,14 @@ package benchmarks
 import Dsssp
 import Graph
 import InputGraph
-import bapi.Panigraham
 import benchmarks.util.Executor
 import benchmarks.util.ScenarioGenerator
 import concurrent.BasicConcurrentDsssp
 import org.openjdk.jmh.annotations.*
-import org.openjdk.jmh.results.format.ResultFormatType
-import org.openjdk.jmh.runner.Runner
-import org.openjdk.jmh.runner.RunnerException
-import org.openjdk.jmh.runner.options.OptionsBuilder
-import sequential.DijkstraRecomputing
 import sequential.SequentialDsssp
 import java.util.concurrent.TimeUnit
 import concurrent.process.Process
+import fit
 
 
 @State(Scope.Thread)
@@ -35,18 +30,16 @@ open class Benchmarks {
     @Param("USA", "WEST", "NY")
     open var graphName: String = ""
 
-    @Param("0", "1", "2", "3")
+    @Param("0", "1")
     open var implIndex: Int = 0
 
     private val impls = listOf(
         { BasicConcurrentDsssp(onIntersection = Process::onIntersectionHelp) },
         { BasicConcurrentDsssp(onIntersection = Process::onIntersectionAbort) },
-        { BasicConcurrentDsssp(onIntersection = Process::onIntersectionWait) },
-        { SequentialDsssp() }
     )
     private val operations = listOf(
-        100_000,
-        100_000,
+        10_000,
+        10_000,
         100_000,
         100_000,
     )
@@ -80,6 +73,7 @@ open class Benchmarks {
 
     @Setup(Level.Invocation)
     fun fit() {
-        impl = impls[implIndex].invoke().fit(graph)
+        impl = impls[implIndex].invoke()
+        impl.fit(graph)
     }
 }

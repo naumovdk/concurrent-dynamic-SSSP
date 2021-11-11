@@ -1,12 +1,13 @@
 package bapi
 
 import Dsssp
+import Dsssp.Companion.INF
 import INITIAL_SIZE
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.HashMap
 
-class Panigraham(private val source: Int = 0) : Dsssp() {
+class Panigraham(private val source: Int = 0) : Dsssp {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
@@ -73,10 +74,6 @@ class Panigraham(private val source: Int = 0) : Dsssp() {
     }
 
     override fun removeVertex(index: Int): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun extractState(): Any {
         TODO("Not yet implemented")
     }
 }

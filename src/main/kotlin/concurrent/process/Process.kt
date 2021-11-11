@@ -56,17 +56,6 @@ class Process(
         }
     }
 
-    fun onIntersectionWait(other: Process) {
-        while (true) {
-            val curStatus = other.status.value
-            if (curStatus.isInProgress()) {
-                Thread.yield()
-            } else {
-                break
-            }
-        }
-    }
-
     fun help() {
         while (true) {
             val curStatus = status.value

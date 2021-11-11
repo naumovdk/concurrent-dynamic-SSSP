@@ -21,7 +21,7 @@ test {
 
     jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
-    maxHeapSize = "9g"
+    maxHeapSize = "100g"
 }
 
 repositories {
@@ -33,6 +33,7 @@ dependencies {
     testImplementation 'org.jetbrains.kotlinx:lincheck:2.14.1'
     testImplementation "org.junit.jupiter:junit-jupiter-api:5.7.2"
     testImplementation "org.junit.jupiter:junit-jupiter-engine:5.7.2"
+    implementation 'com.google.code.gson:gson:2.8.6'
 }
 
 
@@ -62,11 +63,6 @@ task benchmarkJar(type: Jar, dependsOn: jmhJar) {
         (jmhJar.outputs.files + configurations.jmh + configurations.jmhRuntime)
                 .collect { it.isDirectory() ? it : zipTree(it) }
     }
-}
-
-task hello {
-    println projectDir
-    println buildDir
 }
 
 sourceSets {

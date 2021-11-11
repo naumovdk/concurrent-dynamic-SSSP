@@ -1,12 +1,16 @@
 package sequential
 
 import Dsssp
+import Dsssp.Companion.INF
 import INITIAL_SIZE
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import java.io.BufferedWriter
+import java.io.FileWriter
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 
 
-class DijkstraRecomputing(private val source: Int = 0) : Dsssp() {
+class DijkstraRecomputing(private val source: Int = 0) : Dsssp, VerifierState() {
     private val graph: MutableMap<Int, MutableMap<Int, Double>> = mutableMapOf()
     private val distances = mutableMapOf<Int, Double>()
     private var changed = true
@@ -88,6 +92,7 @@ class DijkstraRecomputing(private val source: Int = 0) : Dsssp() {
         graph.remove(index)
         return true
     }
+
 
     override fun extractState(): Any {
         return graph to changed to distances

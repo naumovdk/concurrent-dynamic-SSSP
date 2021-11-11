@@ -2,13 +2,14 @@ package concurrent
 
 import Dsssp
 import INITIAL_SIZE
+import com.google.gson.Gson
 import concurrent.process.Process
 import concurrent.process.Status
 import concurrent.vertex.Vertex
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KFunction2
 
-class BasicConcurrentDsssp(source: Int = 0, val onIntersection: KFunction2<Process, Process, Unit> = Process::onIntersectionHelp) : Dsssp() {
+class BasicConcurrentDsssp(source: Int = 0, val onIntersection: KFunction2<Process, Process, Unit> = Process::onIntersectionHelp) : Dsssp {
     private val vertexes = ConcurrentHashMap<Int, Vertex>()
 
     init {
@@ -46,6 +47,11 @@ class BasicConcurrentDsssp(source: Int = 0, val onIntersection: KFunction2<Proce
         }
     }
 
+    fun copy(): BasicConcurrentDsssp {
+        val json = Gson().toJson(this)
+        return Gson().fromJson(json, BasicConcurrentDsssp::class.java)
+    }
+
     override fun addVertex(index: Int): Boolean {
         val newVertex = Vertex()
         val mapped = vertexes.getOrPut(index) { newVertex }
@@ -60,7 +66,4 @@ class BasicConcurrentDsssp(source: Int = 0, val onIntersection: KFunction2<Proce
         TODO()
     }
 
-    override fun extractState(): Any {
-        TODO("Not yet implemented")
-    }
 }

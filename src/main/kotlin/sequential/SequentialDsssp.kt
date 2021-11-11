@@ -1,12 +1,18 @@
 package sequential
 
 import Dsssp
+import Dsssp.Companion.INF
+import Dsssp.Companion.supportDecremental
+import Dsssp.Companion.supportIncremental
 import INITIAL_SIZE
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import java.io.BufferedWriter
+import java.io.FileWriter
 import java.util.*
 import kotlin.Double.Companion.POSITIVE_INFINITY
 import kotlin.collections.HashMap
 
-class SequentialDsssp(source: Int = 0) : Dsssp() {
+class SequentialDsssp(source: Int = 0) : Dsssp, VerifierState() {
     class Vertex(
         var distance: Double = POSITIVE_INFINITY,
         val outgoing: HashMap<Int, Double> = hashMapOf(),
@@ -89,6 +95,20 @@ class SequentialDsssp(source: Int = 0) : Dsssp() {
         }
 
         return true
+    }
+
+    fun printSsspTree(path: String) {
+//        val file = Files.createFile(Paths.get(path))
+        val writer = BufferedWriter(FileWriter(path))
+        for ((i, v) in vertexes) {
+            writer.write("$i ${v.parent ?: "-"} ${v.distance.toInt()}")
+            for ((u, w) in v.outgoing) {
+                writer.write("o $u ${w.toInt()}")
+            }
+            for ((u, w) in v.incoming) {
+                writer.write("i $u ${w.toInt()}")
+            }
+        }
     }
 
     @Synchronized

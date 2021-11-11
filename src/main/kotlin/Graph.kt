@@ -1,3 +1,4 @@
+import concurrent.vertex.Distance
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStreamReader
@@ -11,6 +12,9 @@ import kotlin.io.path.Path
 
 data class InputEdge(val from: Int, val to: Int, val weight: Int)
 data class InputGraph(val nodes: Int, val edges: List<InputEdge>, val minWeight: Int, val maxWeight: Int)
+
+data class InputVertex(val index: Int, val parent: Int?, val distance: Int, val outgoing: List<InputEdge>, val incoming: List<InputEdge>)
+typealias InputSssp = List<InputVertex>
 
 class Graph {
     companion object {
@@ -69,12 +73,10 @@ class Graph {
         }
 
         fun getGraph(name: String): InputGraph {
-            println("Getting graph")
             if (!Files.exists(Path(path + name))) {
-                println("Couldn't find" + Path(path).toAbsolutePath() + "name")
                 downloadGraph(name)
             }
-            return parseGrFile(path + name, true).also { println("Got graph") }
+            return parseGrFile(path + name, true)
         }
     }
 }
