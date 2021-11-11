@@ -8,7 +8,7 @@ class ScenarioGenerator {
             val r = Random(seed)
             val res = mutableListOf<Int>()
             repeat(size) {
-                val u = (0 until nodes).random()
+                val u = r.nextInt(nodes)
                 if (r.nextDouble() < readWriteRatio) {
                     res.add(u)
                     res.add(0)

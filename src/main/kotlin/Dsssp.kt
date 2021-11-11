@@ -1,6 +1,4 @@
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-
-const val INITIAL_SIZE = 4
+const val INITIAL_SIZE = 0
 
 interface Dsssp {
 
